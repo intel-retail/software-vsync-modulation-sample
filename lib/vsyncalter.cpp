@@ -93,16 +93,21 @@ static inline int calc_steps_to_sync(double time_diff, double shift)
 	return (int) ((time_diff * 100) / (shift * ONE_VSYNC_PERIOD));
 }
 
+void program_mmio(phy_regs *pr)
+{
+#if !TESTING
+	WRITE_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(g_def_phy_num), pr->dkl_pll_div0);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(g_def_phy_num), pr->dkl_visa_serializer);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_BIAS(g_def_phy_num), pr->dkl_bias);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_SSC(g_def_phy_num), pr->dkl_ssc);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_DCO(g_def_phy_num), pr->dkl_dco);
+#endif
+}
+
 static void timer_handler(int sig, siginfo_t *si, void *uc)
 {
 	PRINT("timer done\n");
-#if !TESTING
-	WRITE_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(g_def_phy_num), g_orig_phy_regs.dkl_pll_div0);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(g_def_phy_num), g_orig_phy_regs.dkl_visa_serializer);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_BIAS(g_def_phy_num), g_orig_phy_regs.dkl_bias);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_SSC(g_def_phy_num), g_orig_phy_regs.dkl_ssc);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_DCO(g_def_phy_num), g_orig_phy_regs.dkl_dco);
-#endif
+	program_mmio(&g_orig_phy_regs);
 	DBG("DEFAULT VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
 			"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
 			g_orig_phy_regs.dkl_pll_div0, g_orig_phy_regs.dkl_visa_serializer,
@@ -222,13 +227,8 @@ void synchronize_vsync(double time_diff)
 	DBG("NEW VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
 			"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
 			mod.dkl_pll_div0, mod.dkl_visa_serializer, mod.dkl_bias, mod.dkl_ssc, mod.dkl_dco);
-#if !TESTING
-	WRITE_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(g_def_phy_num), mod.dkl_pll_div0);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(g_def_phy_num), mod.dkl_visa_serializer);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_BIAS(g_def_phy_num), mod.dkl_bias);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_SSC(g_def_phy_num), mod.dkl_ssc);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_DCO(g_def_phy_num), mod.dkl_dco);
-#endif
+	program_mmio(&mod);
+
 	/* Wait to write back the g_orig_phy_regsinal value */
 	while(!g_done) {
 		usleep(1000);
