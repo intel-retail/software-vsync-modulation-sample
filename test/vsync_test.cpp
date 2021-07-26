@@ -27,7 +27,7 @@ void close_signal(int sig)
 
 void print_vsyncs(char *msg, long *va, int sz)
 {
-	DBG("PRIMARY'S VSYNCS\n");
+	DBG("%s VSYNCS\n", msg);
 	for(int i = 0; i < sz; i++) {
 		DBG("%ld\n", va[i]);
 	}
@@ -95,7 +95,7 @@ int do_secondary(char *server_name_or_ip_addr)
 {
 	msg m, r;
 	int ret = 0;
-	long client_vsync_array[MAX_TIMESTAMPS];
+	long client_vsync;
 	long *va;
 	int sz;
 
@@ -115,7 +115,7 @@ int do_secondary(char *server_name_or_ip_addr)
 		}
 	} while(ret);
 
-	if(get_vsync(client_vsync_array, MAX_TIMESTAMPS)) {
+	if(get_vsync(&client_vsync, 1)) {
 		return 1;
 	}
 
@@ -123,7 +123,7 @@ int do_secondary(char *server_name_or_ip_addr)
 	sz = m.get_size();
 
 	print_vsyncs((char *) "PRIMARY'S", va, sz);
-	print_vsyncs((char *) "SECONDARY'S", client_vsync_array, MAX_TIMESTAMPS);
+	print_vsyncs((char *) "SECONDARY'S", &client_vsync, 1);
 
 
 	//	synchronize_vsync(1);
