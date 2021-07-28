@@ -99,7 +99,7 @@ int do_secondary(char *server_name_or_ip_addr)
 	long *va;
 	int sz;
 
-	if(!client.init_client(server_name_or_ip_addr)) {
+	if(client.init_client(server_name_or_ip_addr)) {
 		return 1;
 	}
 
