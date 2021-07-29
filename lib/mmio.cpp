@@ -33,11 +33,104 @@ unsigned long crchighbit;
 unsigned long crcinit_direct;
 unsigned long crcinit_nondirect;
 unsigned long crctab[256];
+struct pci_device *pci_dev = NULL;
+
+/**
+ * intel_get_pci_device:
+ *
+ * Looks up the main graphics pci device using libpciaccess.
+ *
+ * Returns:
+ * The pci_device, exits the program on any failures.
+ */
+struct pci_device *
+intel_get_pci_device(void)
+{
+	struct pci_device *pci_dev;
+	int error;
+
+	error = pci_system_init();
+	if(error) {
+		ERR("Couldn't initialize PCI system\n");
+		return NULL;
+	}
+
+	/* Grab the graphics card. Try the canonical slot first, then
+	 * walk the entire PCI bus for a matching device. */
+	pci_dev = pci_device_find_by_slot(0, 0, 2, 0);
+	if (pci_dev == NULL || pci_dev->vendor_id != 0x8086) {
+		struct pci_device_iterator *iter;
+		struct pci_id_match match;
+
+		match.vendor_id = 0x8086; /* Intel */
+		match.device_id = PCI_MATCH_ANY;
+		match.subvendor_id = PCI_MATCH_ANY;
+		match.subdevice_id = PCI_MATCH_ANY;
+
+		match.device_class = 0x3 << 16;
+		match.device_class_mask = 0xff << 16;
+
+		match.match_data = 0;
+
+		iter = pci_id_match_iterator_create(&match);
+		pci_dev = pci_device_next(iter);
+		pci_iterator_destroy(iter);
+	}
+
+	if(!pci_dev) {
+		ERR("Couldn't find Intel graphics card\n");
+		return NULL;
+	}
+
+	error = pci_device_probe(pci_dev);
+	if(error) {
+		ERR("Couldn't probe graphics card\n");
+		return NULL;
+	}
+
+	if (pci_dev->vendor_id != 0x8086) {
+		ERR("Graphics card is non-intel\n");
+		return NULL;
+	}
+
+	return pci_dev;
+}
+
+/**
+ * intel_mmio_use_pci_bar:
+ * @mmio_data:  mmio structure for IO operations
+ * @pci_dev: intel gracphis pci device
+ *
+ * Fill a mmio_data stucture with igt_mmio to point at the mmio bar.
+ *
+ * @pci_dev can be obtained from intel_get_pci_device().
+ */
+void intel_mmio_use_pci_bar(struct pci_device *pci_dev)
+{
+	int mmio_bar, mmio_size;
+	int error;
+
+	mmio_bar = 0;
+	mmio_size = MMIO_SIZE;
+
+	error = pci_device_map_range(pci_dev,
+				      pci_dev->regions[mmio_bar].base_addr,
+				      mmio_size,
+				      PCI_DEV_MAP_FLAG_WRITABLE,
+				      (void **) &g_mmio);
+
+	if(error) {
+		ERR("Couldn't map MMIO region\n");
+	}
+}
 
 int map_mmio()
 {
-	return map_cmn(MMIO_BAR, MMIO_SIZE);
+	pci_dev = intel_get_pci_device();
+	intel_mmio_use_pci_bar(pci_dev);
+	return 1;
 }
+
 
 int map_cmn(int base_index, int size)
 {
@@ -109,7 +202,7 @@ int map_cmn(int base_index, int size)
 						g_fd, base);
 
 				if(*temp == MAP_FAILED) {
-					ERR("Unable to mmap GMCH Registers\n");
+					ERR("Unable to mmap GMCH Registers: %s\n", strerror(errno));
 					ret_val = 0;
 				}
 			}
@@ -121,7 +214,7 @@ int map_cmn(int base_index, int size)
 void close_mmio_handle()
 {
 	if(g_fd) {
-		munmap(g_mmio, g_mmio_size);
+		pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
 		close(g_fd);
 	}
 }
