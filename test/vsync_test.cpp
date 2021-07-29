@@ -9,6 +9,14 @@ using namespace std;
 
 connection server, client;
 
+/*******************************************************************************
+ * Description
+ *	usage - prints the usage of the program
+ * Parameters
+ *	NONE
+ * Return val
+ *	void
+ ******************************************************************************/
 void usage()
 {
 	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr]\n");
@@ -19,12 +27,33 @@ void usage()
 	PRINT("\tsystem's hostname or IP address so that secondary system can communicate with it\n");
 }
 
+/*******************************************************************************
+ * Description
+ *	close_signal - This function closes the server's socket
+ * Parameters
+ *	int sig - The signal that was received
+ * Return val
+ *	void
+ ******************************************************************************/
 void close_signal(int sig)
 {
-	INFO("Closing server's socket\n");
+	DBG("Closing server's socket\n");
 	server.close_server();
+	vsync_lib_uninit();
 }
 
+/*******************************************************************************
+ * Description
+ *	print_vsyncs - This function prints out the last N vsyncs that the system has
+ *	received either on its own or from another system. It will only print in DBG
+ *	mnode
+ * Parameters
+ *	char *msg - Any prefix message to be printed.
+ *	long *va - The array of vsyncs
+ *	int sz - The size of this array
+ * Return val
+ *	void
+ ******************************************************************************/
 void print_vsyncs(char *msg, long *va, int sz)
 {
 	DBG("%s VSYNCS\n", msg);
@@ -33,6 +62,16 @@ void print_vsyncs(char *msg, long *va, int sz)
 	}
 }
 
+/*******************************************************************************
+ * Description
+ *	do_msg - This function is used by the server side to get last 10 vsyncs, send
+ *	them to the client and receive an ACK from it. Once reveived, it terminates
+ *	connection with the client.
+ * Parameters
+ *	int new_sockfd - The socket on which we need to communicate with the client
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
 int do_msg(int new_sockfd)
 {
 	int ret = 0;
@@ -46,13 +85,13 @@ int do_msg(int new_sockfd)
 	}
 
 	print_vsyncs((char *) "", va, sz);
-
 	do {
 		m.add_vsync();
 		if(server.send_msg(&m, new_sockfd)) {
 			ret = 1;
 			break;
 		}
+		INFO("Sent vsyncs to the secondary system\n");
 
 		if(server.recv_msg(&r, new_sockfd)) {
 			ret = 1;
@@ -65,6 +104,17 @@ int do_msg(int new_sockfd)
 	return ret;
 }
 
+/*******************************************************************************
+ * Description
+ *	do_primary - This function takes all the actions of the primary system which
+ *	are to initialize the server, wait for any clients, dispatch a function to
+ *	handle each client and then wait for another client to join until the user
+ *	Ctrl+C's out.
+ * Parameters
+ *	NONE
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
 int do_primary()
 {
 	if(server.init_server()) {
@@ -91,6 +141,17 @@ int do_primary()
 	return 0;
 }
 
+/*******************************************************************************
+ * Description
+ *	do_secondary - This function takes all the actions of the secondary system
+ *	which are to initialize the client, receive the vsyncs from the server, send
+ *	it an ack back, finds its own vsync, calculate the delta between the two
+ *	and then synchronize its vsyncs to the primary systems.
+ * Parameters
+ *	char *server_name_or_ip_addr - The server's hostname or IP address
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
 int do_secondary(char *server_name_or_ip_addr)
 {
 	msg m, r;
@@ -103,7 +164,6 @@ int do_secondary(char *server_name_or_ip_addr)
 		return 1;
 	}
 
-
 	do {
 		if(client.recv_msg(&m)) {
 			ret = 1;
@@ -114,6 +174,7 @@ int do_secondary(char *server_name_or_ip_addr)
 			ret = 1;
 		}
 	} while(ret);
+	INFO("Received vsyncs from the primary system\n");
 
 	if(get_vsync(&client_vsync, 1)) {
 		return 1;
@@ -124,12 +185,20 @@ int do_secondary(char *server_name_or_ip_addr)
 
 	print_vsyncs((char *) "PRIMARY'S", va, sz);
 	print_vsyncs((char *) "SECONDARY'S", &client_vsync, 1);
-
-
+	INFO("Time difference between secondary and primary is %ld\n", client_vsync - va[sz-1]);
 	//	synchronize_vsync(1);
 	return ret;
 }
 
+/*******************************************************************************
+ * Description
+ *	main - This is the main function
+ * Parameters
+ *	int argc - The number of command line arguments
+ *	char *argv[] - Each command line argument in an array
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
 int main(int argc, char *argv[])
 {
 	int ret = 0;

@@ -53,16 +53,42 @@ int g_done = 0;
 int g_dev_fd = 0;
 phy_regs g_orig_phy_regs, mod;
 
+/*******************************************************************************
+ * Description
+ *  open_device - This function opens /dev/dri/card0
+ * Parameters
+ *	NONE
+ * Return val
+ *  int - >=0 == SUCCESS, <0 == FAILURE
+ ******************************************************************************/
 int open_device()
 {
 	return open("/dev/dri/card0", O_RDWR | O_CLOEXEC, 0);
 }
 
+/*******************************************************************************
+ * Description
+ *  close_device - This function closes an open handle
+ * Parameters
+ *	NONE
+ * Return val
+ *  void
+ ******************************************************************************/
 void close_device()
 {
 	close(g_dev_fd);
 }
 
+/*******************************************************************************
+ * Description
+ *  vsync_lib_init - This function initializes the library. It must be called
+ *	ahead of all other functions because it opens device, maps MMIO space and
+ *	initializes any key global variables.
+ * Parameters
+ *	NONE
+ * Return val
+ *  int
+ ******************************************************************************/
 int vsync_lib_init()
 {
 	if(!IS_INIT()) {
@@ -71,7 +97,7 @@ int vsync_lib_init()
 			ERR("Couldn't open /dev/dri/card0. Is i915 installed?\n");
 			return 1;
 		}
-		if(!map_mmio()) {
+		if(map_mmio()) {
 			close_device();
 			return 1;
 		}
@@ -82,6 +108,16 @@ int vsync_lib_init()
 	return 0;
 }
 
+/*******************************************************************************
+ * Description
+ *  vsync_lib_uninit - This function uninitializes the library by closing devices
+ *  and unmapping memory. It must be called at program exit or else we can have
+ *  memory leaks in the program.
+ * Parameters
+ *	NONE
+ * Return val
+ *  void
+ ******************************************************************************/
 void vsync_lib_uninit()
 {
 	close_device();
@@ -89,11 +125,33 @@ void vsync_lib_uninit()
 	g_init = 0;
 }
 
+/*******************************************************************************
+ * Description
+ *  calc_steps_to_sync - This function calculates how many steps we need to take
+ *  in order to synchronize the primary and secondary systems given the delta
+ *  between primary and secondary and the shift that we need to make in terms of
+ *  percentage. Each steps is a single vsync period (typically 16.666 ms).
+ * Parameters
+ *	double time_diff - The time difference in between the two systems in us.
+ *	double shift - The percentage shift that we need to make in our vsyncs.
+ * Return val
+ *  int
+ ******************************************************************************/
 static inline int calc_steps_to_sync(double time_diff, double shift)
 {
 	return (int) ((time_diff * 100) / (shift * ONE_VSYNC_PERIOD));
 }
 
+/*******************************************************************************
+ * Description
+ *  program_mmio - This function programs the MMIO registers needed to move a
+ *  vsync period for a system.
+ * Parameters
+ *	phy_regs *pr - The data structure that holds all of the PHY registers that
+ *	need to be programmed
+ * Return val
+ *  void
+ ******************************************************************************/
 void program_mmio(phy_regs *pr)
 {
 #if !TESTING
@@ -105,6 +163,23 @@ void program_mmio(phy_regs *pr)
 #endif
 }
 
+/*******************************************************************************
+ * Description
+ *	timer_handler - The timer callback function which gets executed whenever a
+ *	timer expires. We program MMIO registers of the PHY in this function becase
+ *	we have waited for a certain time period to get the primary and secondary
+ *	systems vsync in sync and now it is time to reprogram the default values
+ *	for the secondary system's PHYs.
+ * Parameters
+ *	int sig - The signal that fired
+ *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
+    further information about the signal
+ *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
+    The structure pointed to by this field contains signal context information
+	that was saved on the user-space stack by the kernel
+ * Return val
+ *  void
+ ******************************************************************************/
 static void timer_handler(int sig, siginfo_t *si, void *uc)
 {
 	PRINT("timer done\n");
@@ -116,6 +191,14 @@ static void timer_handler(int sig, siginfo_t *si, void *uc)
 	g_done = 1;
 }
 
+/*******************************************************************************
+ * Description
+ *	make_timer - This function creates a timer.
+ * Parameters
+ * long expire_ms - The time period in ms after which the timer will fire.
+ * Return val
+ *	int - 0 == SUCCESS, -1 = FAILURE
+ ******************************************************************************/
 static int make_timer(long expire_ms)
 {
 	struct sigevent         te;
@@ -145,14 +228,24 @@ static int make_timer(long expire_ms)
 	its.it_value.tv_nsec = TV_NSEC(expire_ms);
 	timer_settime(timer_id, 0, &its, NULL);
 
-	return(0);
+	return 0;
 }
 
-/*
- * time_diff - This is the time difference in between the master and the slave
- * systems. If master is ahead of the slave , then the time difference is a
- * positive number otherwise negative.
- */
+/*******************************************************************************
+ * Description
+ *  synchronize_vsync - This function synchronizes the primary and secondary
+ *  systems vsync. It is run on the secondary system. The way that it works is
+ *  that it finds out the default PHY register values, calculates a shift
+ *  based on the time difference provided by the caller and then reprograms the
+ *  PHY registers so that the secondary system can either slow down or speed up
+ *  its vsnyc durations.
+ * Parameters
+ * double time_diff - This is the time difference in between the primary and the
+ * secondary systems. If master is ahead of the slave , then the time difference
+ * is a positive number otherwise negative.
+ * Return val
+ *  void
+ ******************************************************************************/
 void synchronize_vsync(double time_diff)
 {
 	int  steps;
@@ -236,6 +329,18 @@ void synchronize_vsync(double time_diff)
 	}
 }
 
+/*******************************************************************************
+ * Description
+ *	vblank_handler - The function which will be called whenever a VBLANK occurs
+ * Parameters
+ *	int fd - The device file descriptor
+ *	unsigned int frame - Frame number
+ *	unsigned int sec - second when the vblank occured
+ *	unsigned int usec - micro second when the vblank occured
+ *	void *data - a private data structure pointing to the vbl_info
+ * Return val
+ *  void
+ ******************************************************************************/
 static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 			   unsigned int usec, void *data)
 {
@@ -254,6 +359,17 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 	}
 }
 
+/*******************************************************************************
+ * Description
+ *  get_vsync - This function gets a list of vsyncs for the number of times
+ *  indicated by the caller and provide their timestamps in the array provided
+ * Parameters
+ *	long *vsync_array - The array in which vsync timestamps need to be given
+ *	int size - The size of this array. This is also the number of times that we
+ *	need to get the next few vsync timestamps.
+ * Return val
+ *  int - 0 == SUCCESS, -1 = ERROR
+ ******************************************************************************/
 int get_vsync(long *vsync_array, int size)
 {
 	drmVBlank vbl;

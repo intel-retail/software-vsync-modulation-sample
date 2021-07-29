@@ -35,16 +35,15 @@ unsigned long crcinit_nondirect;
 unsigned long crctab[256];
 struct pci_device *pci_dev = NULL;
 
-/**
- * intel_get_pci_device:
- *
- * Looks up the main graphics pci device using libpciaccess.
- *
- * Returns:
- * The pci_device, exits the program on any failures.
- */
-struct pci_device *
-intel_get_pci_device(void)
+/*******************************************************************************
+ * Description
+ *	intel_get_pci_device - Looks up the main graphics pci device using libpciaccess.
+ * Parameters
+ *	None
+ * Return val
+ *	struct pci_device * - The pci device or NULL in case of a failure
+ ******************************************************************************/
+struct pci_device *intel_get_pci_device(void)
 {
 	struct pci_device *pci_dev;
 	int error;
@@ -96,16 +95,16 @@ intel_get_pci_device(void)
 	return pci_dev;
 }
 
-/**
- * intel_mmio_use_pci_bar:
- * @mmio_data:  mmio structure for IO operations
- * @pci_dev: intel gracphis pci device
- *
- * Fill a mmio_data stucture with igt_mmio to point at the mmio bar.
- *
- * @pci_dev can be obtained from intel_get_pci_device().
- */
-void intel_mmio_use_pci_bar(struct pci_device *pci_dev)
+/*******************************************************************************
+ * Description
+ *	intel_mmio_use_pci_bar - Fill a mmio_data stucture with igt_mmio to point
+ *	at the mmio bar.
+ * Parameters
+ *	struct pci_device *pci_dev - intel graphics pci device
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 {
 	int mmio_bar, mmio_size;
 	int error;
@@ -121,17 +120,35 @@ void intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 
 	if(error) {
 		ERR("Couldn't map MMIO region\n");
+		return 1;
 	}
+	return 0;
 }
 
+/*******************************************************************************
+ * Description
+ *	map_mmio - This functions maps the MMIO region
+ * Parameters
+ *	NONE
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
 int map_mmio()
 {
 	pci_dev = intel_get_pci_device();
-	intel_mmio_use_pci_bar(pci_dev);
-	return 1;
+	return intel_mmio_use_pci_bar(pci_dev);
 }
 
 
+/*******************************************************************************
+ * Description
+ *	map_cmn - This function can either map MMIO or regular video memory
+ * Parameters
+ *	int base_index - Which bar to map
+ *	int size - The size of memory to map
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
 int map_cmn(int base_index, int size)
 {
 	int found = 0;
@@ -211,11 +228,16 @@ int map_cmn(int base_index, int size)
 	return ret_val;
 }
 
+/*******************************************************************************
+ * Description
+ *	close_mmio_handle - Unmap the memory range that was mapped during initialization
+ * Parameters
+ *	NONE
+ * Return val
+ *	void
+ ******************************************************************************/
 void close_mmio_handle()
 {
-	if(g_fd) {
-		pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
-		close(g_fd);
-	}
+	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
 }
 
