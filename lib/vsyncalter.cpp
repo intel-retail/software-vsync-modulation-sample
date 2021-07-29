@@ -68,6 +68,7 @@ int vsync_lib_init()
 	if(!IS_INIT()) {
 		g_dev_fd = open_device();
 		if(g_dev_fd < 0) {
+			ERR("Couldn't open /dev/dri/card0. Is i915 installed?\n");
 			return 1;
 		}
 		if(!map_mmio()) {
