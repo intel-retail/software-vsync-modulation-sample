@@ -16,7 +16,6 @@
 #define TESTING                       0
 #define SHIFT                         (0.1)
 #define REF_FREQ                      38.4
-#define ONE_VSYNC_PERIOD              16.666
 #define ONE_SEC_IN_NS                 (1000 * 1000 * 1000)
 #define TV_NSEC(t)                    ((long) ((t * 1000000) % ONE_SEC_IN_NS))
 #define TV_SEC(t)                     ((time_t) ((t * 1000000) / ONE_SEC_IN_NS))
@@ -139,7 +138,7 @@ void vsync_lib_uninit()
  ******************************************************************************/
 static inline int calc_steps_to_sync(double time_diff, double shift)
 {
-	return (int) ((time_diff * 100) / (shift * ONE_VSYNC_PERIOD));
+	return (int) ((time_diff * 100) / (shift * ONE_VSYNC_PERIOD_IN_MS));
 }
 
 /*******************************************************************************
@@ -284,7 +283,7 @@ void synchronize_vsync(double time_diff)
 	}
 	steps = calc_steps_to_sync(time_diff, shift);
 	PRINT("steps are %d\n", steps);
-	make_timer((long) steps * ONE_VSYNC_PERIOD);
+	make_timer((long) steps * ONE_VSYNC_PERIOD_IN_MS);
 
 	/*
 	 * PLL frequency in MHz (base) = 38.4 * DKL_PLL_DIV0[i_fbprediv_3_0] *

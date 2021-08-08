@@ -143,6 +143,25 @@ int do_primary()
 
 /*******************************************************************************
  * Description
+ *	find_avg - This function finds the average of all the vertical syncs that
+ *	have been provided by the primary system to the secondary.
+ * Parameters
+ *	long *va - The array holding all the vertical syncs of the primary system
+ *	int sz - The size of this array
+ * Return val
+ *	long - The average of the vertical syncs
+ ******************************************************************************/
+long find_avg(long *va, int sz)
+{
+	int avg = 0;
+	for(int i = 0; i < sz - 1; i++) {
+		avg += va[i+1] - va[i];
+	}
+	return avg / ((sz == 1) ? sz : (sz - 1));
+}
+
+/*******************************************************************************
+ * Description
  *	do_secondary - This function takes all the actions of the secondary system
  *	which are to initialize the client, receive the vsyncs from the server, send
  *	it an ack back, finds its own vsync, calculate the delta between the two
@@ -156,7 +175,7 @@ int do_secondary(char *server_name_or_ip_addr)
 {
 	msg m, r;
 	int ret = 0;
-	long client_vsync;
+	long client_vsync, delta, avg;
 	long *va;
 	int sz;
 
@@ -185,8 +204,27 @@ int do_secondary(char *server_name_or_ip_addr)
 
 	print_vsyncs((char *) "PRIMARY'S", va, sz);
 	print_vsyncs((char *) "SECONDARY'S", &client_vsync, 1);
-	INFO("Time difference between secondary and primary is %ld\n", client_vsync - va[sz-1]);
-	//	synchronize_vsync(1);
+	delta = client_vsync - va[sz-1];
+	avg = find_avg(va, sz);
+	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
+	INFO("Time difference between secondary and primary is %ld\n", delta);
+	/*
+	 * If the primary is ahead or behind the secondary by more than a vsync,
+	 * we can just adjust the secondary's vsync to what we think the primary's
+	 * next vsync would be happening at. We do this by calculating the average
+	 * of its last N vsyncs that it has provided to us and assuming that its
+	 * next vsync would be happening at this cadence. Then we modulo the delta
+	 * with this average to give us a time difference between it's nearest
+	 * vsync to the secondary's. As long as we adjust the secondary's vsync
+	 * to this value, it would basically mean that the primary and secondary
+	 * system's vsyncs are firing at the same time.
+	 */
+	if(delta > ONE_VSYNC_PERIOD_IN_MS * 1000 ||
+			delta < ONE_VSYNC_PERIOD_IN_MS * 1000) {
+		delta %= avg;
+		INFO("Time difference between secondary and primary's next vsync is %ld\n", delta);
+	}
+	//	synchronize_vsync((double) delta / 1000 );
 	return ret;
 }
 

@@ -1,6 +1,7 @@
 #ifndef _VSYNCALTER_H
 #define _VSYNCALTER_H
 
+#define ONE_VSYNC_PERIOD_IN_MS        16.666
 #define MAX_TIMESTAMPS                10
 
 int vsync_lib_init();
