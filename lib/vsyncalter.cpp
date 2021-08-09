@@ -91,13 +91,7 @@ void close_device()
 int vsync_lib_init()
 {
 	if(!IS_INIT()) {
-		g_dev_fd = open_device();
-		if(g_dev_fd < 0) {
-			ERR("Couldn't open /dev/dri/card0. Is i915 installed?\n");
-			return 1;
-		}
 		if(map_mmio()) {
-			close_device();
 			return 1;
 		}
 		g_init = 1;
@@ -119,7 +113,6 @@ int vsync_lib_init()
  ******************************************************************************/
 void vsync_lib_uninit()
 {
-	close_device();
 	close_mmio_handle();
 	g_init = 0;
 }
@@ -376,12 +369,19 @@ int get_vsync(long *vsync_array, int size)
 	drmEventContext evctx;
 	vbl_info handler_info;
 
+	g_dev_fd = open_device();
+	if(g_dev_fd < 0) {
+		ERR("Couldn't open /dev/dri/card0. Is i915 installed?\n");
+		return -1;
+	}
+
 	/* Get current count first */
 	vbl.request.type = DRM_VBLANK_RELATIVE;
 	vbl.request.sequence = 0;
 	ret = drmWaitVBlank(g_dev_fd, &vbl);
 	if (ret) {
 		ERR("drmWaitVBlank (relative) failed ret: %i\n", ret);
+		close_device();
 		return -1;
 	}
 
@@ -396,6 +396,7 @@ int get_vsync(long *vsync_array, int size)
 	ret = drmWaitVBlank(g_dev_fd, &vbl);
 	if (ret) {
 		ERR("drmWaitVBlank (relative, event) failed ret: %i\n", ret);
+		close_device();
 		return -1;
 	}
 
@@ -425,9 +426,11 @@ int get_vsync(long *vsync_array, int size)
 		ret = drmHandleEvent(g_dev_fd, &evctx);
 		if (ret) {
 			ERR("drmHandleEvent failed: %i\n", ret);
+			close_device();
 			return -1;
 		}
 	}
 
+	close_device();
 	return 0;
 }
