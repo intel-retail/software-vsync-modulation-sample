@@ -124,14 +124,14 @@ void vsync_lib_uninit()
  *  between primary and secondary and the shift that we need to make in terms of
  *  percentage. Each steps is a single vsync period (typically 16.666 ms).
  * Parameters
- *	double time_diff - The time difference in between the two systems in us.
+ *	double time_diff - The time difference in between the two systems in ms.
  *	double shift - The percentage shift that we need to make in our vsyncs.
  * Return val
  *  int
  ******************************************************************************/
 static inline int calc_steps_to_sync(double time_diff, double shift)
 {
-	return (int) ((time_diff * 100) / (shift * ONE_VSYNC_PERIOD_IN_MS));
+	return (int) ((time_diff * 100) / shift);
 }
 
 /*******************************************************************************
@@ -233,8 +233,8 @@ static int make_timer(long expire_ms)
  *  its vsnyc durations.
  * Parameters
  * double time_diff - This is the time difference in between the primary and the
- * secondary systems. If master is ahead of the slave , then the time difference
- * is a positive number otherwise negative.
+ * secondary systems in ms. If master is ahead of the slave , then the time
+ * difference is a positive number otherwise negative.
  * Return val
  *  void
  ******************************************************************************/
@@ -276,7 +276,7 @@ void synchronize_vsync(double time_diff)
 	}
 	steps = calc_steps_to_sync(time_diff, shift);
 	PRINT("steps are %d\n", steps);
-	make_timer((long) steps * ONE_VSYNC_PERIOD_IN_MS);
+	make_timer((long) steps);
 
 	/*
 	 * PLL frequency in MHz (base) = 38.4 * DKL_PLL_DIV0[i_fbprediv_3_0] *
