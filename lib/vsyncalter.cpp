@@ -24,6 +24,7 @@
 #define BITS_PER_LONG                 64
 #define GENMASK(h, l) \
 	(((~0UL) - (1UL << (l)) + 1) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#define MAX_PHYS                      6
 #define PHY_BASE                      0x168000
 #define PHY_NUM_BASE(phy_num)         (PHY_BASE + phy_num * 0x1000)
 #define DKL_PLL_DIV0(phy_num)         (PHY_NUM_BASE(phy_num) + 0x200)
@@ -33,6 +34,7 @@
 #define DKL_DCO(phy_num)              (PHY_NUM_BASE(phy_num) + 0x224)
 
 typedef struct _phy_regs {
+	int phy_num;
 	int dkl_pll_div0;
 	int dkl_visa_serializer;
 	int dkl_bias;
@@ -47,8 +49,7 @@ typedef struct _vbl_info {
 } vbl_info;
 
 
-int g_def_phy_num = 0;
-int g_done = 0;
+int g_done[MAX_PHYS];
 int g_dev_fd = 0;
 phy_regs g_orig_phy_regs, mod;
 
@@ -95,7 +96,6 @@ int vsync_lib_init()
 			return 1;
 		}
 		g_init = 1;
-		g_def_phy_num = 3;
 	}
 
 	return 0;
@@ -147,11 +147,11 @@ static inline int calc_steps_to_sync(double time_diff, double shift)
 void program_mmio(phy_regs *pr)
 {
 #if !TESTING
-	WRITE_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(g_def_phy_num), pr->dkl_pll_div0);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(g_def_phy_num), pr->dkl_visa_serializer);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_BIAS(g_def_phy_num), pr->dkl_bias);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_SSC(g_def_phy_num), pr->dkl_ssc);
-	WRITE_OFFSET_DWORD(g_mmio, DKL_DCO(g_def_phy_num), pr->dkl_dco);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(pr->phy_num), pr->dkl_pll_div0);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(pr->phy_num), pr->dkl_visa_serializer);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_BIAS(pr->phy_num), pr->dkl_bias);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_SSC(pr->phy_num), pr->dkl_ssc);
+	WRITE_OFFSET_DWORD(g_mmio, DKL_DCO(pr->phy_num), pr->dkl_dco);
 #endif
 }
 
@@ -180,7 +180,7 @@ static void timer_handler(int sig, siginfo_t *si, void *uc)
 			"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
 			g_orig_phy_regs.dkl_pll_div0, g_orig_phy_regs.dkl_visa_serializer,
 			g_orig_phy_regs.dkl_bias, g_orig_phy_regs.dkl_ssc, g_orig_phy_regs.dkl_dco);
-	g_done = 1;
+	g_done[g_orig_phy_regs.phy_num]= 1;
 }
 
 /*******************************************************************************
@@ -223,6 +223,157 @@ static int make_timer(long expire_ms)
 	return 0;
 }
 
+
+/*******************************************************************************
+ * Description
+ *	find_enabled_dkl_phys - This function finds out which of the DKL phys are on
+ *	It does this by querying the DKL_PLL_DIV0 register for all possible
+ *	combinations
+ * Parameters
+ *	int *phy_list - The phy list with all enabled DKL phys found
+ *	int *size - The size of this list
+ * Return val
+ *	void
+ ******************************************************************************/
+void find_enabled_dkl_phys(int *phy_list, int *size)
+{
+	unsigned int val;
+	*size = 0;
+	for(int i = 0; i < MAX_PHYS; i++) {
+		val = READ_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(i));
+		if(val != 0 && val != 0xFFFFFFFF) {
+			phy_list[(*size)++] = i;
+			DBG("DKL phy #%d is on\n", i);
+		}
+	}
+	DBG("Total DKL phys on: %d\n", *size);
+}
+
+
+/*******************************************************************************
+ * Description
+ *	reset_done - This function just sets the all indices of g_done to 1, because
+ *	by default we assume that all the phys are done programming
+ * Parameters
+ *	NONE
+ * Return val
+ *	void
+ ******************************************************************************/
+void reset_done()
+{
+	for(int i = 0; i < MAX_PHYS; i++) {
+		g_done[i] = 1;
+	}
+}
+
+/*******************************************************************************
+ * Description
+ *	synchronize_dkl_phys - This function synchronizes any DKL phys on the system
+ * Parameters
+ *	double time_diff - This is the time difference in between the primary and the
+ *	secondary systems in ms. If master is ahead of the slave , then the time
+ *	difference is a positive number otherwise negative.
+ * Return val
+ *	void
+ ******************************************************************************/
+void synchronize_dkl_phys(double time_diff)
+{
+	int  steps;
+	double shift = SHIFT;
+	int phy_list[MAX_PHYS];
+	int size;
+
+	find_enabled_dkl_phys(phy_list, &size);
+	if(!size) {
+		DBG("No DKL PHYs found\n");
+		return;
+	}
+	reset_done();
+
+	memset(&g_orig_phy_regs, 0, sizeof(phy_regs));
+	memset(&mod, 0, sizeof(phy_regs));
+
+	/* Cycle through all the DKL phys */
+	for(int i = 0; i < size; i++) {
+#if TESTING
+		g_orig_phy_regs.dkl_pll_div0 = 0x50284274;
+		g_orig_phy_regs.dkl_visa_serializer = 0x54321000;
+		g_orig_phy_regs.dkl_bias = 0XC1000000;
+		g_orig_phy_regs.dkl_ssc = 0x400020ff;
+		g_orig_phy_regs.dkl_dco = 0xe4004080;
+#else
+		g_orig_phy_regs.phy_num = phy_list[i];
+		g_orig_phy_regs.dkl_pll_div0 = READ_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(phy_list[i]));
+		g_orig_phy_regs.dkl_visa_serializer = READ_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(phy_list[i]));
+		g_orig_phy_regs.dkl_bias = READ_OFFSET_DWORD(g_mmio, DKL_BIAS(phy_list[i]));
+		g_orig_phy_regs.dkl_ssc = READ_OFFSET_DWORD(g_mmio, DKL_SSC(phy_list[i]));
+		g_orig_phy_regs.dkl_dco = READ_OFFSET_DWORD(g_mmio, DKL_DCO(phy_list[i]));
+#endif
+		/*
+		 * For whichever PHY we find, let's set the done flag to 0 so that we can later
+		 * have a timer for it to reset the default values back in their registers
+		 */
+		g_done[phy_list[i]] = 0;
+		DBG("OLD VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
+				"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
+				g_orig_phy_regs.dkl_pll_div0, g_orig_phy_regs.dkl_visa_serializer,
+				g_orig_phy_regs.dkl_bias, g_orig_phy_regs.dkl_ssc, g_orig_phy_regs.dkl_dco);
+
+		memcpy(&mod, &g_orig_phy_regs, sizeof(phy_regs));
+
+		if(time_diff < 0) {
+			shift *= -1;
+		}
+		steps = calc_steps_to_sync(time_diff, shift);
+		PRINT("steps are %d\n", steps);
+		make_timer((long) steps);
+
+		/*
+		 * PLL frequency in MHz (base) = 38.4 * DKL_PLL_DIV0[i_fbprediv_3_0] *
+		 *		( DKL_PLL_DIV0[i_fbdiv_intgr_7_0]  + DKL_BIAS[i_fbdivfrac_21_0] / 2^22 )
+		 */
+		int i_fbprediv_3_0    = (g_orig_phy_regs.dkl_pll_div0 & GENMASK(11, 8)) >> 8;
+		int i_fbdiv_intgr_7_0 = g_orig_phy_regs.dkl_pll_div0 & GENMASK(7, 0);
+		int i_fbdivfrac_21_0  = (g_orig_phy_regs.dkl_bias & GENMASK(29, 8)) >> 8;
+		double pll_freq = (double) (REF_FREQ * i_fbprediv_3_0 * (i_fbdiv_intgr_7_0 + i_fbdivfrac_21_0 / pow(2, 22)));
+		double new_pll_freq = pll_freq + (shift * pll_freq / 100);
+		double new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_FREQ * i_fbprediv_3_0)) - i_fbdiv_intgr_7_0) * pow(2,22);
+
+		if(new_i_fbdivfrac_21_0 < 0) {
+			i_fbdiv_intgr_7_0 -= 1;
+			mod.dkl_pll_div0 &= ~GENMASK(7, 0);
+			mod.dkl_pll_div0 |= i_fbdiv_intgr_7_0;
+			new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
+		}
+
+		DBG("old pll_freq = %f, new_pll_freq = %f\n", pll_freq, new_pll_freq);
+		DBG("new fbdivfrac = %d = 0x%X\n", (int) new_i_fbdivfrac_21_0, (int) new_i_fbdivfrac_21_0);
+
+		mod.dkl_bias &= ~GENMASK(29, 8);
+		mod.dkl_bias |= (long)new_i_fbdivfrac_21_0 << 8;
+		mod.dkl_visa_serializer &= ~GENMASK(2, 0);
+		mod.dkl_visa_serializer |= 0x200;
+		mod.dkl_ssc &= ~GENMASK(31, 29);
+		mod.dkl_ssc |= 0x2 << 29;
+		mod.dkl_ssc &= ~BIT(13);
+		mod.dkl_ssc |= 0x2 << 12;
+		mod.dkl_dco &= ~BIT(2);
+		mod.dkl_dco |= 0x2 << 1;
+
+		DBG("NEW VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
+				"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
+				mod.dkl_pll_div0, mod.dkl_visa_serializer, mod.dkl_bias, mod.dkl_ssc, mod.dkl_dco);
+		program_mmio(&mod);
+	}
+
+	/* Wait to write back the g_orig_phy_regs original value */
+	for(int i = 0; i < MAX_PHYS; i++) {
+		while(!g_done[i]) {
+			usleep(1000);
+		}
+	}
+}
+
 /*******************************************************************************
  * Description
  *  synchronize_vsync - This function synchronizes the primary and secondary
@@ -240,85 +391,12 @@ static int make_timer(long expire_ms)
  ******************************************************************************/
 void synchronize_vsync(double time_diff)
 {
-	int  steps;
-	double shift = SHIFT;
-
 	if(!IS_INIT()) {
 		ERR("Uninitialized lib, please call lib init first\n");
 		return;
 	}
 
-	memset(&g_orig_phy_regs, 0, sizeof(phy_regs));
-	memset(&mod, 0, sizeof(phy_regs));
-
-#if TESTING
-	g_orig_phy_regs.dkl_pll_div0 = 0x50284274;
-	g_orig_phy_regs.dkl_visa_serializer = 0x54321000;
-	g_orig_phy_regs.dkl_bias = 0XC1000000;
-	g_orig_phy_regs.dkl_ssc = 0x400020ff;
-	g_orig_phy_regs.dkl_dco = 0xe4004080;
-#else
-	g_orig_phy_regs.dkl_pll_div0 = READ_OFFSET_DWORD(g_mmio, DKL_PLL_DIV0(g_def_phy_num));
-	g_orig_phy_regs.dkl_visa_serializer = READ_OFFSET_DWORD(g_mmio, DKL_VISA_SERIALIZER(g_def_phy_num));
-	g_orig_phy_regs.dkl_bias = READ_OFFSET_DWORD(g_mmio, DKL_BIAS(g_def_phy_num));
-	g_orig_phy_regs.dkl_ssc = READ_OFFSET_DWORD(g_mmio, DKL_SSC(g_def_phy_num));
-	g_orig_phy_regs.dkl_dco = READ_OFFSET_DWORD(g_mmio, DKL_DCO(g_def_phy_num));
-#endif
-	DBG("OLD VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
-			"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
-			g_orig_phy_regs.dkl_pll_div0, g_orig_phy_regs.dkl_visa_serializer,
-			g_orig_phy_regs.dkl_bias, g_orig_phy_regs.dkl_ssc, g_orig_phy_regs.dkl_dco);
-
-	memcpy(&mod, &g_orig_phy_regs, sizeof(phy_regs));
-
-	if(time_diff < 0) {
-		shift *= -1;
-	}
-	steps = calc_steps_to_sync(time_diff, shift);
-	PRINT("steps are %d\n", steps);
-	make_timer((long) steps);
-
-	/*
-	 * PLL frequency in MHz (base) = 38.4 * DKL_PLL_DIV0[i_fbprediv_3_0] *
-	 *		( DKL_PLL_DIV0[i_fbdiv_intgr_7_0]  + DKL_BIAS[i_fbdivfrac_21_0] / 2^22 )
-	 */
-	int i_fbprediv_3_0    = (g_orig_phy_regs.dkl_pll_div0 & GENMASK(11, 8)) >> 8;
-	int i_fbdiv_intgr_7_0 = g_orig_phy_regs.dkl_pll_div0 & GENMASK(7, 0);
-	int i_fbdivfrac_21_0  = (g_orig_phy_regs.dkl_bias & GENMASK(29, 8)) >> 8;
-	double pll_freq = (double) (REF_FREQ * i_fbprediv_3_0 * (i_fbdiv_intgr_7_0 + i_fbdivfrac_21_0 / pow(2, 22)));
-	double new_pll_freq = pll_freq + (shift * pll_freq / 100);
-	double new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_FREQ * i_fbprediv_3_0)) - i_fbdiv_intgr_7_0) * pow(2,22);
-
-	if(new_i_fbdivfrac_21_0 < 0) {
-		i_fbdiv_intgr_7_0 -= 1;
-		mod.dkl_pll_div0 &= ~GENMASK(7, 0);
-		mod.dkl_pll_div0 |= i_fbdiv_intgr_7_0;
-		new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
-	}
-
-	DBG("old pll_freq = %f, new_pll_freq = %f\n", pll_freq, new_pll_freq);
-	DBG("new fbdivfrac = %d = 0x%X\n", (int) new_i_fbdivfrac_21_0, (int) new_i_fbdivfrac_21_0);
-
-	mod.dkl_bias &= ~GENMASK(29, 8);
-	mod.dkl_bias |= (long)new_i_fbdivfrac_21_0 << 8;
-	mod.dkl_visa_serializer &= ~GENMASK(2, 0);
-	mod.dkl_visa_serializer |= 0x200;
-	mod.dkl_ssc &= ~GENMASK(31, 29);
-	mod.dkl_ssc |= 0x2 << 29;
-	mod.dkl_ssc &= ~BIT(13);
-	mod.dkl_ssc |= 0x2 << 12;
-	mod.dkl_dco &= ~BIT(2);
-	mod.dkl_dco |= 0x2 << 1;
-
-	DBG("NEW VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
-			"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
-			mod.dkl_pll_div0, mod.dkl_visa_serializer, mod.dkl_bias, mod.dkl_ssc, mod.dkl_dco);
-	program_mmio(&mod);
-
-	/* Wait to write back the g_orig_phy_regsinal value */
-	while(!g_done) {
-		usleep(1000);
-	}
+	synchronize_dkl_phys(time_diff);
 }
 
 /*******************************************************************************
