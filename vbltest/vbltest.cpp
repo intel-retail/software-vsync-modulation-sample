@@ -3,9 +3,9 @@
 #include <unistd.h>
 #include <vsyncalter.h>
 #include <debug.h>
+#include <math.h>
 
 using namespace std;
-#define SIZE 10
 
 /*******************************************************************************
  * Description
@@ -42,7 +42,7 @@ void print_vsyncs(char *msg, long *va, int sz)
 {
 	INFO("%s VSYNCS\n", msg);
 	for(int i = 0; i < sz; i++) {
-		INFO("%ld\n", va[i]);
+		INFO("%6f\n", ((double) va[i])/1000000);
 	}
 }
 
@@ -57,21 +57,37 @@ void print_vsyncs(char *msg, long *va, int sz)
  ******************************************************************************/
 int main(int argc, char *argv[])
 {
-	int ret = 0;
-	long client_vsync[SIZE], avg;
+	int ret = 0, size;
+	long *client_vsync, avg;
+
+	if(argc != 2) {
+		ERR("Usage: %s <number of vsyncs to get timestamp for>\n", argv[0]);
+		return 1;
+	}
+
+	size = atoi(argv[1]);
+	if(size < 0 || size > 6000) {
+		ERR("Specify the number of vsyncs to be between 1 and 600\n");
+		return 1;
+	}
+
 	if(vsync_lib_init()) {
 		ERR("Couldn't initialize vsync lib\n");
 		return 1;
 	}
 
-	if(get_vsync(client_vsync, SIZE)) {
+	client_vsync = new long[size];
+
+	if(get_vsync(client_vsync, size)) {
+		delete client_vsync;
 		return 1;
 	}
 
-	avg = find_avg(client_vsync, SIZE);
-	print_vsyncs((char *) "", client_vsync, SIZE);
+	avg = find_avg(&client_vsync[0], size);
+	print_vsyncs((char *) "", client_vsync, size);
 	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
 
+	delete client_vsync;
 	vsync_lib_uninit();
 	return ret;
 }
