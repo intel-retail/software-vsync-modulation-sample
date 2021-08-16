@@ -19,7 +19,7 @@
 #define ONE_SEC_IN_NS                 (1000 * 1000 * 1000)
 #define TV_NSEC(t)                    ((long) ((t * 1000000) % ONE_SEC_IN_NS))
 #define TV_SEC(t)                     ((time_t) ((t * 1000000) / ONE_SEC_IN_NS))
-#define TIME_IN_USEC(t)               (unsigned long) (1000000 * t.tv_sec + t.tv_usec)
+#define TIME_IN_USEC(sec, usec)       (unsigned long) (1000000 * sec + usec)
 #define BIT(nr)                       (1UL << (nr))
 #define BITS_PER_LONG                 64
 #define GENMASK(h, l) \
@@ -415,18 +415,17 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 			   unsigned int usec, void *data)
 {
 	drmVBlank vbl;
-	struct timeval end;
 	vbl_info *info = (vbl_info *)data;
+	memset(&vbl, 0, sizeof(drmVBlank));
+	if(info->counter < info->size) {
+		info->vsync_array[info->counter++] = TIME_IN_USEC(sec, usec);
+	}
 
 	vbl.request.type = (drmVBlankSeqType) (DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT);
 	vbl.request.sequence = 1;
 	vbl.request.signal = (unsigned long)data;
 
 	drmWaitVBlank(g_dev_fd, &vbl);
-	gettimeofday(&end, NULL);
-	if(info->counter < info->size) {
-		info->vsync_array[info->counter++] = TIME_IN_USEC(end);
-	}
 }
 
 /*******************************************************************************
@@ -453,15 +452,7 @@ int get_vsync(long *vsync_array, int size)
 		return -1;
 	}
 
-	/* Get current count first */
-	vbl.request.type = DRM_VBLANK_RELATIVE;
-	vbl.request.sequence = 0;
-	ret = drmWaitVBlank(g_dev_fd, &vbl);
-	if (ret) {
-		ERR("drmWaitVBlank (relative) failed ret: %i\n", ret);
-		close_device();
-		return -1;
-	}
+	memset(&vbl, 0, sizeof(drmVBlank));
 
 	handler_info.vsync_array = vsync_array;
 	handler_info.size = size;
