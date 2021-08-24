@@ -175,7 +175,7 @@ int do_secondary(char *server_name_or_ip_addr)
 {
 	msg m, r;
 	int ret = 0;
-	long client_vsync, delta, avg;
+	long client_vsync[MAX_TIMESTAMPS], delta, avg;
 	long *va;
 	int sz;
 
@@ -195,7 +195,7 @@ int do_secondary(char *server_name_or_ip_addr)
 	} while(ret);
 	INFO("Received vsyncs from the primary system\n");
 
-	if(get_vsync(&client_vsync, 1)) {
+	if(get_vsync(client_vsync, MAX_TIMESTAMPS)) {
 		return 1;
 	}
 
@@ -203,10 +203,12 @@ int do_secondary(char *server_name_or_ip_addr)
 	sz = m.get_size();
 
 	print_vsyncs((char *) "PRIMARY'S", va, sz);
-	print_vsyncs((char *) "SECONDARY'S", &client_vsync, 1);
-	delta = client_vsync - va[sz-1];
+	print_vsyncs((char *) "SECONDARY'S", client_vsync, MAX_TIMESTAMPS);
+	delta = client_vsync[0] - va[sz-1];
 	avg = find_avg(va, sz);
 	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
+	avg = find_avg(client_vsync, MAX_TIMESTAMPS);
+	INFO("Time average of the vsyncs on the secondary system is %ld\n", avg);
 	INFO("Time difference between secondary and primary is %ld\n", delta);
 	/*
 	 * If the primary is ahead or behind the secondary by more than a vsync,
@@ -219,8 +221,7 @@ int do_secondary(char *server_name_or_ip_addr)
 	 * to this value, it would basically mean that the primary and secondary
 	 * system's vsyncs are firing at the same time.
 	 */
-	if(delta > ONE_VSYNC_PERIOD_IN_MS * 1000 ||
-			delta < ONE_VSYNC_PERIOD_IN_MS * 1000) {
+	if(delta > avg || delta < avg) {
 		delta %= avg;
 		INFO("Time difference between secondary and primary's next vsync is %ld\n", delta);
 	}
