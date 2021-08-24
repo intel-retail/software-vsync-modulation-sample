@@ -1,5 +1,5 @@
 export PWD=$(shell pwd)
-BINNAME=vbltest
+BINNAME=$(notdir $(PWD))
 MAKE += --no-print-directory
 export CC=g++
 export DBG_FLAGS?=-Ofast
