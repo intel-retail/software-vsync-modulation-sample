@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <vsyncalter.h>
 #include <debug.h>
+#include <stdlib.h>
 #include "connection.h"
 
 using namespace std;
@@ -168,10 +169,13 @@ long find_avg(long *va, int sz)
  *	and then synchronize its vsyncs to the primary systems.
  * Parameters
  *	char *server_name_or_ip_addr - The server's hostname or IP address
+ *	int synchronize - Whether to synchronize or not.
+ *		0 = do not synchronize, just exit after getting vblanks
+ *		1 = synchronize the secondary to primary's vsyncs
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int do_secondary(char *server_name_or_ip_addr)
+int do_secondary(char *server_name_or_ip_addr, int synchronize)
 {
 	msg m, r;
 	int ret = 0;
@@ -225,7 +229,10 @@ int do_secondary(char *server_name_or_ip_addr)
 		delta %= avg;
 		INFO("Time difference between secondary and primary's next vsync is %ld\n", delta);
 	}
-	//	synchronize_vsync((double) delta / 1000 );
+
+	if(synchronize) {
+		synchronize_vsync((double) delta / 1000 );
+	}
 	return ret;
 }
 
@@ -242,8 +249,8 @@ int main(int argc, char *argv[])
 {
 	int ret = 0;
 	if((argc == 2 && strcasecmp(argv[1], "pri")) ||
-		(argc == 3 && strcasecmp(argv[1], "sec")) ||
-		(argc < 2 || argc > 3)) {
+		((argc == 3  || argc == 4) && strcasecmp(argv[1], "sec")) ||
+		(argc < 2 || argc > 4)) {
 		ERR("Invalid parameters\n");
 		usage();
 		return 1;
@@ -257,7 +264,7 @@ int main(int argc, char *argv[])
 	if(!strcasecmp(argv[1], "pri")) {
 		ret = do_primary();
 	} else if(!strcasecmp(argv[1], "sec")) {
-		ret = do_secondary(argv[2]);
+		ret = do_secondary(argv[2], argc == 4 ? atoi(argv[3]) : 1);
 	}
 
 	vsync_lib_uninit();
