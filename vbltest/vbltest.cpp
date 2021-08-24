@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
 
 	if(get_vsync(client_vsync, size)) {
 		delete client_vsync;
+		vsync_lib_uninit();
 		return 1;
 	}
 
