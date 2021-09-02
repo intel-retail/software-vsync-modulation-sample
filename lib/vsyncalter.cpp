@@ -280,8 +280,8 @@ static void timer_handler(int sig, siginfo_t *si, void *uc)
 	if(ui->get_type() == DKL) {
 		dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
 		program_dkl_mmio(dr, 0);
-		DBG("DEFAULT VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
-				"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
+		DBG("DEFAULT VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
+				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
 				dr->dkl_pll_div0.orig_val,
 				dr->dkl_visa_serializer.orig_val,
 				dr->dkl_bias.orig_val,
@@ -291,7 +291,7 @@ static void timer_handler(int sig, siginfo_t *si, void *uc)
 	} else {
 		combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
 		program_combo_mmio(cr, 0);
-		DBG("DEFAULT VALUES\n cfgcr0 = 0x%X\n cfgcr1 = 0x%X\n",
+		DBG("DEFAULT VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
 				cr->cfgcr0.orig_val, cr->cfgcr1.orig_val);
 		cr->done = 1;
 	}
@@ -449,8 +449,8 @@ void program_dkl_phys(double time_diff)
 		user_info *ui = new user_info(DKL, &dkl_table[i]);
 		make_timer((long) steps, ui);
 #endif
-		DBG("OLD VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
-				"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
+		DBG("OLD VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
+				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
 				dkl_table[i].dkl_pll_div0.orig_val,
 				dkl_table[i].dkl_visa_serializer.orig_val,
 				dkl_table[i].dkl_bias.orig_val,
@@ -475,8 +475,9 @@ void program_dkl_phys(double time_diff)
 			new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_DKL_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
 		}
 
-		DBG("old pll_freq = %f, new_pll_freq = %f\n", pll_freq, new_pll_freq);
-		DBG("new fbdivfrac = %d = 0x%X\n", (int) new_i_fbdivfrac_21_0, (int) new_i_fbdivfrac_21_0);
+		DBG("old pll_freq \t %f\n", pll_freq);
+		DBG("new_pll_freq \t %f\n", new_pll_freq);
+		DBG("new fbdivfrac \t 0x%X\n", (int) new_i_fbdivfrac_21_0);
 
 		dkl_table[i].dkl_bias.mod_val &= ~GENMASK(29, 8);
 		dkl_table[i].dkl_bias.mod_val |= (long)new_i_fbdivfrac_21_0 << 8;
@@ -489,8 +490,8 @@ void program_dkl_phys(double time_diff)
 		dkl_table[i].dkl_dco.mod_val &= ~BIT(2);
 		dkl_table[i].dkl_dco.mod_val |= 0x2 << 1;
 
-		DBG("NEW VALUES\n dkl_pll_div0 = 0x%X\n dkl_visa_serializer = 0x%X\n "
-				"dkl_bias = 0x%X\n dkl_ssc = 0x%X\n dkl_dco = 0x%X\n",
+		DBG("NEW VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
+				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
 				dkl_table[i].dkl_pll_div0.mod_val,
 				dkl_table[i].dkl_visa_serializer.mod_val,
 				dkl_table[i].dkl_bias.mod_val,
@@ -541,7 +542,7 @@ void program_combo_phys(double time_diff)
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
 		make_timer((long) steps, ui);
 #endif
-		DBG("OLD VALUES\n cfgcr0 = 0x%X\n cfgcr1 = 0x%X\n",
+		DBG("OLD VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
 				combo_table[i].cfgcr0.orig_val, combo_table[i].cfgcr1.orig_val);
 
 		/*
@@ -572,14 +573,15 @@ void program_combo_phys(double time_diff)
 		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		double new_i_fbdivfrac_14_0  = (((new_pll_freq * (5 * pdiv * qdiv * kdiv)) / REF_COMBO_FREQ) - i_fbdiv_intgr_9_0) * pow(2, 15);
 
-		DBG("old pll_freq = %f, new_pll_freq = %f\n", pll_freq, new_pll_freq);
-		DBG("old fbdivfrac = %d = 0x%X\n", (int) i_fbdivfrac_14_0, (int) i_fbdivfrac_14_0);
-		DBG("new fbdivfrac = %d = 0x%X\n", (int) new_i_fbdivfrac_14_0, (int) new_i_fbdivfrac_14_0);
+		DBG("old pll_freq \t %f\n", pll_freq);
+		DBG("new_pll_freq \t %f\n", new_pll_freq);
+		DBG("old fbdivfrac \t 0x%X\n", (int) i_fbdivfrac_14_0);
+		DBG("new fbdivfrac \t 0x%X\n", (int) new_i_fbdivfrac_14_0);
 
 		combo_table[i].cfgcr0.mod_val &= ~GENMASK(24, 10);
 		combo_table[i].cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
 
-		DBG("NEW VALUES\n cfgcr0 = 0x%X\n", combo_table[i].cfgcr0.mod_val);
+		DBG("NEW VALUES\n cfgcr0 \t 0x%X\n", combo_table[i].cfgcr0.mod_val);
 		program_combo_mmio(&combo_table[i], 1);
 	}
 }
