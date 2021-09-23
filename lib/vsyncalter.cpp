@@ -13,7 +13,7 @@
 #include "mmio.h"
 #include <xf86drm.h>
 
-#define TESTING                       0
+#define TESTING                       1
 #define SHIFT                         (0.1)
 #define REF_DKL_FREQ                  38.4
 #define REF_COMBO_FREQ                19.2
@@ -27,6 +27,31 @@
 	(((~0UL) - (1UL << (l)) + 1) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 #define GETBITS_VAL(val, h, l)       ((val & GENMASK(h, l)) >> l)
 #define MAX_PHYS                      6
+#define _ICL_PHY_MISC_A               0x64C00
+#define _ICL_PHY_MISC_B               0x64C04
+#define _PICK_EVEN(__index, __a, __b) ((__a) + (__index) * ((__b) - (__a)))
+#define _PORT(port, a, b)             _PICK_EVEN(port, a, b)
+#define _MMIO_PORT(port, a, b)        _PORT(port, a, b)
+#define ICL_PHY_MISC(port)            _MMIO_PORT(port, _ICL_PHY_MISC_A, _ICL_PHY_MISC_B)
+#define ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN (1 << 23)
+#define COMP_INIT                     (1 << 31)
+/*
+ * CNL/ICL Port/COMBO-PHY Registers
+ */
+#define _ICL_COMBOPHY_A               0x162000
+#define _ICL_COMBOPHY_B               0x6C000
+#define _EHL_COMBOPHY_C               0x160000
+#define _RKL_COMBOPHY_D               0x161000
+#define _ADL_COMBOPHY_E               0x16B000
+#define _ICL_PORT_COMP                0x100
+#define _PICK(__index, ...)           (((const uint32_t []){ __VA_ARGS__ })[__index])
+#define _ICL_COMBOPHY(phy)            _PICK(phy, _ICL_COMBOPHY_A, \
+			                               _ICL_COMBOPHY_B, \
+				                           _EHL_COMBOPHY_C, \
+										   _RKL_COMBOPHY_D, \
+										   _ADL_COMBOPHY_E)
+#define _ICL_PORT_COMP_DW(dw, phy)    (_ICL_COMBOPHY(phy) + _ICL_PORT_COMP + 4 * (dw))
+#define ICL_PORT_COMP_DW0(phy)        _ICL_PORT_COMP_DW(0, phy)
 #define PHY_BASE                      0x168000
 #define PHY_NUM_BASE(phy_num)         (PHY_BASE + phy_num * 0x1000)
 #define DKL_PLL_DIV0(phy_num)         (PHY_NUM_BASE(phy_num) + 0x200)
@@ -389,16 +414,25 @@ int find_enabled_combo_phys()
 	enabled++;
 	combo_table[0].enabled = 1;
 #else
-	unsigned int val;
-	for(int i = 0; i < ARRAY_SIZE(combo_table); i++) {
-		val = READ_OFFSET_DWORD(g_mmio, combo_table[i].cfgcr0.addr);
-		if(val != 0 && val != 0xFFFFFFFF) {
-			combo_table[i].enabled = 1;
-			enabled++;
-			DBG("Combo phy #%d is on\n", i);
-		}
-		combo_table[i].done = 1;
+	for(int phy = 0; phy < 5; phy++) {
+		PRINT("misc: 0x%X, val = 0x%X, dw0: 0x%X, enabled: %d\n", ICL_PHY_MISC(phy), ICL_PORT_COMP_DW0(phy),
+				READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)),
+				(!(READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)) &
+				  ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
+				 (READ_OFFSET_DWORD(g_mmio, ICL_PORT_COMP_DW0(phy)) & COMP_INIT)));
 	}
+#if 0
+	for(int phy = 0; phy < ARRAY_SIZE(combo_table); phy++) {
+		if((READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)) &
+					ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
+				(READ_OFFSET_DWORD(g_mmio, ICL_PORT_COMP_DW0(phy)) & COMP_INIT)) {
+			combo_table[phy].enabled = 1;
+			enabled++;
+			DBG("Combo phy #%d is on\n", phy);
+		}
+		combo_table[phy].done = 1;
+	}
+#endif
 #endif
 	DBG("Total Combo phys on: %d\n", enabled);
 	return enabled;
@@ -522,8 +556,14 @@ void program_combo_phys(double time_diff)
 			continue;
 		}
 #if TESTING
+		/* ADL */
+		/*
 		combo_table[i].cfgcr0.orig_val = 0x01c001a5;
 		combo_table[i].cfgcr1.orig_val = 0x013331cf;
+		*/
+		/* TGL */
+		combo_table[i].cfgcr0.orig_val = 0x00b001b1;
+		combo_table[i].cfgcr1.orig_val = 0x00000e84;
 #else
 		READ_VAL(cfgcr0, orig_val);
 		READ_VAL(cfgcr1, orig_val);
@@ -673,7 +713,7 @@ void synchronize_vsync(double time_diff)
 		return;
 	}
 
-	for(int i = DKL; i < TOTAL_PHYS; i++) {
+	for(int i = COMBO; i < TOTAL_PHYS; i++) {
 		synchronize_phys(i, time_diff);
 	}
 }
