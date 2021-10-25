@@ -13,7 +13,7 @@
 #include "mmio.h"
 #include <xf86drm.h>
 
-#define TESTING                       1
+#define TESTING                       0
 #define SHIFT                         (0.1)
 #define REF_DKL_FREQ                  38.4
 #define REF_COMBO_FREQ                19.2
@@ -414,6 +414,8 @@ int find_enabled_combo_phys()
 	enabled++;
 	combo_table[0].enabled = 1;
 #else
+	enabled++;
+	combo_table[0].enabled = 1;
 	for(int phy = 0; phy < 5; phy++) {
 		PRINT("misc: 0x%X, val = 0x%X, dw0: 0x%X, enabled: %d\n", ICL_PHY_MISC(phy), ICL_PORT_COMP_DW0(phy),
 				READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)),
@@ -421,7 +423,6 @@ int find_enabled_combo_phys()
 				  ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
 				 (READ_OFFSET_DWORD(g_mmio, ICL_PORT_COMP_DW0(phy)) & COMP_INIT)));
 	}
-#if 0
 	for(int phy = 0; phy < ARRAY_SIZE(combo_table); phy++) {
 		if((READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)) &
 					ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
@@ -432,7 +433,6 @@ int find_enabled_combo_phys()
 		}
 		combo_table[phy].done = 1;
 	}
-#endif
 #endif
 	DBG("Total Combo phys on: %d\n", enabled);
 	return enabled;
@@ -562,7 +562,7 @@ void program_combo_phys(double time_diff)
 		combo_table[i].cfgcr1.orig_val = 0x013331cf;
 		*/
 		/* TGL */
-		combo_table[i].cfgcr0.orig_val = 0x00b001b1;
+		combo_table[i].cfgcr0.orig_val = 0x00B001B1;
 		combo_table[i].cfgcr1.orig_val = 0x00000e84;
 #else
 		READ_VAL(cfgcr0, orig_val);
@@ -598,25 +598,36 @@ void program_combo_phys(double time_diff)
 		int kdiv = GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 8, 6);
 		/* TODO: In case we run into some other weird dividers, then we may need to revisit this */
 		int qdiv = (kdiv == 2) ? GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 17, 10) : 1;
-		double dco_divider = ((double) i_fbdiv_intgr_9_0 + ((double) i_fbdivfrac_14_0  / pow(2, 15)));
-		double dco_clock = REF_COMBO_FREQ * dco_divider;
+		int ro_div_bias_frac = i_fbdivfrac_14_0 << 5 | ((i_fbdiv_intgr_9_0 & GENMASK(2, 0)) << 19);
+		int ro_div_bias_int = i_fbdiv_intgr_9_0 >> 3;
+		double dco_divider = 4*((double) ro_div_bias_int + ((double) ro_div_bias_frac / pow(2,22)));
+		double dco_clock = 2 * REF_COMBO_FREQ * dco_divider;
 		double pll_freq = dco_clock / (5 * pdiv * qdiv * kdiv);
 		double new_pll_freq = pll_freq + (shift * pll_freq / 100);
 		double new_dco_clock = dco_clock + (shift * dco_clock / 100);
-		double fb_div_frac = (new_dco_clock - (i_fbdiv_intgr_9_0 * REF_COMBO_FREQ)) / REF_COMBO_FREQ;
-		if(fb_div_frac > 1) {
+		double new_dco_divider = new_dco_clock / (2 * REF_COMBO_FREQ);
+		double new_ro_div_bias_frac = (new_dco_divider / 4 - (double) ro_div_bias_int) * pow(2,22);
+		if(new_ro_div_bias_frac > 0xFFFFF) {
 			i_fbdiv_intgr_9_0 += 1;
-		} else if (fb_div_frac < 0) {
+			new_ro_div_bias_frac -= 0xFFFFF;
+		} else if (new_ro_div_bias_frac < 0) {
 			i_fbdiv_intgr_9_0 -= 1;
+			new_ro_div_bias_frac += 0xFFFFF;
 		}
 		combo_table[i].cfgcr0.mod_val &= ~GENMASK(9, 0);
 		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
-		double new_i_fbdivfrac_14_0  = (((new_pll_freq * (5 * pdiv * qdiv * kdiv)) / REF_COMBO_FREQ) - i_fbdiv_intgr_9_0) * pow(2, 15);
+		double new_i_fbdivfrac_14_0  = ((long int) new_ro_div_bias_frac & ~BIT(19)) >> 5;
 
 		DBG("old pll_freq \t %f\n", pll_freq);
 		DBG("new_pll_freq \t %f\n", new_pll_freq);
+		DBG("old dco_clock \t %f\n", dco_clock);
+		DBG("new dco_clock \t %f\n", new_dco_clock);
 		DBG("old fbdivfrac \t 0x%X\n", (int) i_fbdivfrac_14_0);
+		DBG("old ro_div_frac \t 0x%X\n", ro_div_bias_frac);
+		DBG("old fbdivint \t 0x%X\n", i_fbdiv_intgr_9_0);
+		DBG("old ro_div_int \t 0x%X\n", ro_div_bias_int);
 		DBG("new fbdivfrac \t 0x%X\n", (int) new_i_fbdivfrac_14_0);
+		DBG("new ro_div_frac \t 0x%X\n", (int) new_ro_div_bias_frac);
 
 		combo_table[i].cfgcr0.mod_val &= ~GENMASK(24, 10);
 		combo_table[i].cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
