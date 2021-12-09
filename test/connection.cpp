@@ -10,22 +10,25 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <net/if.h>
+#include <linux/if_packet.h>
 #include <errno.h>
+#include <ctype.h>
 
 /*******************************************************************************
  * Description
  *	open_socket - This function opens a TCP socket stream
  * Parameters
- *	NONE
+ *	int type - TCP/UDP/PTP
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int connection::open_socket()
+int connection::open_socket(int type)
 {
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	sockfd = socket(type == PTP ? AF_PACKET : AF_INET, type == TCP ? SOCK_STREAM : SOCK_DGRAM, 0);
 
 	if(sockfd < 0) {
-		ERR("socket function failed!!\n");
+		ERR("socket function failed! Error: %s\n", strerror(errno));
 		return 1;
 	}
 	return 0;
@@ -35,17 +38,18 @@ int connection::open_socket()
  * Description
  *	set_server - This function sets server characteristics like portid
  * Parameters
+ *  sockaddr_in *addr - The address data structure that needs to be filled
  *	int s_addr - server address
  *	int portid - port id
  * Return val
  *	void
  ******************************************************************************/
-void connection::set_server(int s_addr, int portid)
+void connection::set_server(sockaddr_in *addr, int s_addr, int portid)
 {
-	memset((char *)&server_addr, 0, sizeof(server_addr));
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = s_addr;
-	server_addr.sin_port = htons(portid);
+	memset(addr, 0, sizeof(sockaddr_in));
+	addr->sin_family = AF_INET;
+	addr->sin_addr.s_addr = s_addr;
+	addr->sin_port = htons(portid);
 }
 
 /*******************************************************************************
@@ -53,11 +57,11 @@ void connection::set_server(int s_addr, int portid)
  *	init_client - This function initalizes the client, by opening the socket and
  *	connecting to the server.
  * Parameters
- *	char *server_name - Either the server's hostname or its IP address
+ *	const char *server_name - Either the server's hostname or its IP address
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int connection::init_client(char *server_name)
+int connection::init_client(const char *server_name)
 {
 	char server_host_addr[MAX_LEN], copy[MAX_LEN], *ptr;
 	int ret;
@@ -68,7 +72,7 @@ int connection::init_client(char *server_name)
 		return 1;
 	}
 
-	if(open_socket()) {
+	if(open_socket(con_type)) {
 		return 1;
 	}
 
@@ -88,7 +92,7 @@ int connection::init_client(char *server_name)
 	}
 
 	pr_inet(hostptr->h_addr_list, hostptr->h_length, server_host_addr);
-	set_server(inet_addr(server_host_addr), portid);
+	set_server(&server_addr, inet_addr(server_host_addr), portid);
 
 	ret = connect(sockfd,
 		(struct sockaddr *) &server_addr,
@@ -162,12 +166,12 @@ int connection::init_server()
 {
 	int ret, optval = 1;
 
-	if(open_socket()) {
+	if(open_socket(con_type)) {
 		return 1;
 	}
 
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-	set_server(htonl(INADDR_ANY), portid);
+	set_server(&server_addr, htonl(INADDR_ANY), portid);
 
 	ret = bind(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	if(ret < 0) {
@@ -213,34 +217,38 @@ int connection::accept_client(int *new_sockfd)
 
 /*******************************************************************************
  * Description
- *	send_msg - This function sends a message to the other system using the send API
+ *	sendto_msg - This function sends a message to the other system using the send API
  * Parameters
  *	void *m - The message that we need to send
  *	int size - The size of this message
  *	int sockid - If not 0, this function will use this socket connection to
  *	communicate with the other system on. If 0, then a global sockfd variable will
  *	be used.
+ *	struct sockaddr *dest - The destination address
+ *	int dest_size - Size of the destination data structure
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int connection::send_msg(void *m, int size, int sockid)
+int connection::sendto_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
 {
 	long bytes_returned;
-	bytes_returned = send(sockid ? sockid : sockfd,
+	bytes_returned = sendto(sockid ? sockid : sockfd,
 		(char *) m,
 		size,
-		0);
+		0,
+		dest,
+		dest_size);
+	DBG("Sent message with %ld bytes\n", bytes_returned);
 	if(bytes_returned != size) {
-		ERR("send function failed\n");
+		ERR("send function failed. Error: %s\n", strerror(errno));
 		return 1;
 	}
-	DBG("Sent message with %ld bytes\n", bytes_returned);
 	return 0;
 }
 
 /*******************************************************************************
  * Description
- *	recv_msg - This function receives a message to the other system using the
+ *	recvfrom_msg - This function receives a message to the other system using the
  *	recv API
  * Parameters
  *	void *m - The message that we need to receive
@@ -248,20 +256,25 @@ int connection::send_msg(void *m, int size, int sockid)
  *	int sockid - If not 0, this function will use this socket connection to
  *	communicate with the other system on. If 0, then a global sockfd variable will
  *	be used.
+ *	struct sockaddr *dest - The destination address
+ *	int dest_size - Size of the destination data structure
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int connection::recv_msg(void *m, int size, int sockid)
+int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
 {
 	long bytes_returned;
-	bytes_returned = recv(sockid ? sockid : sockfd,
-		(char *) m,
-		size,
-		0);
+	int cli_len = dest_size;
+	bytes_returned = recvfrom(sockid ? sockid : sockfd,
+			(char *) m,
+			size,
+			0,
+			dest,
+			(unsigned int *) &cli_len);
+	DBG("Received message with %ld bytes\n", bytes_returned);
 	if(bytes_returned < 0) {
-		ERR("recv function failed\n");
+		ERR("recv function failed. Error: %s\n", strerror(errno));
 		return 1;
 	}
-	DBG("Received message with %ld bytes\n", bytes_returned);
 	return 0;
 }
