@@ -5,6 +5,7 @@
 #include <debug.h>
 #include <stdlib.h>
 #include "connection.h"
+#include "message.h"
 
 using namespace std;
 
@@ -88,13 +89,13 @@ int do_msg(int new_sockfd)
 	print_vsyncs((char *) "", va, sz);
 	do {
 		m.add_vsync();
-		if(server.send_msg(&m, new_sockfd)) {
+		if(server.send_msg(&m, sizeof(m), new_sockfd)) {
 			ret = 1;
 			break;
 		}
 		INFO("Sent vsyncs to the secondary system\n");
 
-		if(server.recv_msg(&r, new_sockfd)) {
+		if(server.recv_msg(&r, sizeof(r), new_sockfd)) {
 			ret = 1;
 			break;
 		}
@@ -188,12 +189,12 @@ int do_secondary(char *server_name_or_ip_addr, int synchronize)
 	}
 
 	do {
-		if(client.recv_msg(&m)) {
+		if(client.recv_msg(&m, sizeof(m))) {
 			ret = 1;
 		}
 
 		ret == 0 ? r.ack() : r.nack();
-		if(client.send_msg(&r)) {
+		if(client.send_msg(&r, sizeof(r))) {
 			ret = 1;
 		}
 	} while(ret);

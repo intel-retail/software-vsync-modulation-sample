@@ -1,4 +1,5 @@
 #include "connection.h"
+#include "message.h"
 #include "debug.h"
 #include <stdlib.h>
 #include <string.h>
@@ -112,8 +113,8 @@ void connection::close_client()
 {
 	msg m;
 	m.close();
-	send_msg(&m);
-	recv_msg(&m);
+	send_msg(&m, sizeof(m));
+	recv_msg(&m, sizeof(m));
 	close(sockfd);
 }
 
@@ -214,21 +215,22 @@ int connection::accept_client(int *new_sockfd)
  * Description
  *	send_msg - This function sends a message to the other system using the send API
  * Parameters
- *	msg *m - The message that we need to send
+ *	void *m - The message that we need to send
+ *	int size - The size of this message
  *	int sockid - If not 0, this function will use this socket connection to
  *	communicate with the other system on. If 0, then a global sockfd variable will
  *	be used.
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int connection::send_msg(msg *m, int sockid)
+int connection::send_msg(void *m, int size, int sockid)
 {
 	long bytes_returned;
 	bytes_returned = send(sockid ? sockid : sockfd,
 		(char *) m,
-		sizeof(*m),
+		size,
 		0);
-	if(bytes_returned != sizeof(*m)) {
+	if(bytes_returned != size) {
 		ERR("send function failed\n");
 		return 1;
 	}
@@ -241,19 +243,20 @@ int connection::send_msg(msg *m, int sockid)
  *	recv_msg - This function receives a message to the other system using the
  *	recv API
  * Parameters
- *	msg *m - The message that we need to receive
+ *	void *m - The message that we need to receive
+ *	int size - The size of this message
  *	int sockid - If not 0, this function will use this socket connection to
  *	communicate with the other system on. If 0, then a global sockfd variable will
  *	be used.
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int connection::recv_msg(msg *m, int sockid)
+int connection::recv_msg(void *m, int size, int sockid)
 {
 	long bytes_returned;
 	bytes_returned = recv(sockid ? sockid : sockfd,
 		(char *) m,
-		sizeof(*m),
+		size,
 		0);
 	if(bytes_returned < 0) {
 		ERR("recv function failed\n");
