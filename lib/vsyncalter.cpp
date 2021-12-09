@@ -818,8 +818,6 @@ int get_vsync(long *vsync_array, int size)
 		if (ret <= 0) {
 			ERR("select timed out or error (ret %d)\n", ret);
 			continue;
-		} else if (FD_ISSET(0, &fds)) {
-			break;
 		}
 
 		ret = drmHandleEvent(g_dev_fd, &evctx);
