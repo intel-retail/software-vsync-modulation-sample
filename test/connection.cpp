@@ -278,3 +278,206 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 	}
 	return 0;
 }
+
+/*******************************************************************************
+ * Description
+ *	Constructor of ptp_connection class. This just initializes a few class
+ *	members
+ * Parameters
+ *	char *ifc - The PTP interface of the server. For examle: enp176s0
+ *	char *ip - The ethernet address of the server. For example:
+ *		84:47:09:04:eb:0e
+ * Return val
+ *	NONE
+ ******************************************************************************/
+ptp_connection::ptp_connection(char *ifc, char *ip)
+{
+	con_type = PTP;
+	strncpy(iface, ifc, MAX_LEN-1);
+	if(ip) {
+		strncpy(server_ip, ip, MAX_LEN-1);
+	}
+	memset(&dest_sa, 0, sizeof(dest_sa));
+}
+
+/*******************************************************************************
+ * Description
+ *	find_iface_index - Given a PTP interface name, this function finds the index
+ *	of this interface. It does so by sending the SIOCGIFINDEX IOCTL to the
+ *	network driver.
+ * Parameters
+ *	const char *iface - The PTP interface of the server. For examle: enp176s0
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int ptp_connection::find_iface_index(const char *iface)
+{
+	int sd;
+	int err;
+	struct ifreq ifreq;
+
+	sd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if(sd == -1) {
+		ERR("failed to open socket. Error: %s\n", strerror(errno));
+		return 1;
+	}
+
+	strncpy(ifreq.ifr_name, iface, IFNAMSIZ);
+	err = ioctl(sd, SIOCGIFINDEX, &ifreq);
+	if(err < 0) {
+		ERR("failed to get interface index. Error: %s\n", strerror(errno));
+		close(sd);
+		return 1;
+	}
+
+	close(sd);
+	return ifreq.ifr_ifindex;
+}
+
+#define MAX_MAC_ADDR_LEN 17
+/*******************************************************************************
+ * Description
+ *	str_to_l2_addr - This function converts a string based ethernet address to
+ *	the l2 format. The result is stored in addr member variable
+ * Parameters
+ *	char *str - The address to convert.
+ * Return val
+ *	bool - true = SUCCESS, false = FAILURE
+ ******************************************************************************/
+bool ptp_connection::str_to_l2_addr(char *str)
+{
+	int i;
+	char *save = str;
+	size_t len = strnlen(str, MAX_MAC_ADDR_LEN);
+
+	for(i = 0; i < ETH_ALEN; ++i) {
+		unsigned long tmp;
+
+		if(str >= save + len)
+			break;
+		tmp = strtoul(str, &str, 16);
+		if(tmp == MAX_LEN)
+			break;
+		addr[i] = tmp;
+		if(!ispunct(str[0]))
+			break;
+		++str;
+	}
+
+	return i == ETH_ALEN-1 ? true : false;
+}
+
+/*******************************************************************************
+ * Description
+ *	ptp_open - This function opens a ptp socket, find the corresponding interface
+ *	index and binds the connection.
+ * Parameters
+ *	const char *iface
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int ptp_connection::ptp_open(const char *iface)
+{
+	struct sockaddr_ll bind_arg;
+
+	if(!iface) {
+		ERR("Invalid interface\n");
+		return 1;
+	}
+
+	if(open_socket(con_type)) {
+		return 1;
+	}
+
+	iface_index = find_iface_index(iface);
+	if(iface_index == -1) {
+		ERR("Invalid interface index\n");
+		return 1;
+	}
+
+	memset( &bind_arg, 0, sizeof(bind_arg));
+	bind_arg.sll_family = AF_PACKET;
+	bind_arg.sll_protocol = htons(portid);
+	bind_arg.sll_ifindex = iface_index;
+	if(bind(sockfd, (struct sockaddr *)&bind_arg, sizeof(bind_arg)) == -1) {
+		ERR("Bind on socket failed. Error: %s\n", strerror(errno));
+		return 1;
+	}
+	return 0;
+}
+
+/*******************************************************************************
+ * Description
+ *	init_client - This function initializes the client. Besides opening a PTP
+ *	socket, we also convert the ethernet address in the format that we need.
+ * Parameters
+ *	const char *server_name
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int ptp_connection::init_client(const char *server_name)
+{
+	if(ptp_open(iface)) {
+		return 1;
+	}
+
+	if(!str_to_l2_addr(server_ip)) {
+		return 1;
+	}
+
+	dest_sa.sll_family  = AF_PACKET;
+	dest_sa.sll_protocol = htons(portid);
+	memcpy(dest_sa.sll_addr, addr, sizeof(addr));
+	dest_sa.sll_ifindex = iface_index;
+	dest_sa.sll_halen = ETH_ALEN;
+	return 0;
+}
+
+/*******************************************************************************
+ * Description
+ *	init_server - This function initializes the PTP server. It's just a wrapper
+ *	around ptp_open.
+ * Parameters
+ *	NONE
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int ptp_connection::init_server()
+{
+	if(ptp_open(iface)) {
+		return 1;
+	}
+	return 0;
+}
+
+/*******************************************************************************
+ * Description
+ *	send_msg - This function sends a message to a destination address using
+ *	sendto API.
+ * Parameters
+ *	void *m - The message to send
+ *	int size - The size of this message
+ *	int sockid - The file descriptor to send to
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int ptp_connection::send_msg(void *m, int size, int sockid)
+{
+	return sendto_msg(m, size, sockid, (struct sockaddr *) &dest_sa, sizeof(dest_sa));
+}
+
+/*******************************************************************************
+ * Description
+ *	recv_msg - This function receives a message from a source address using
+ *	recvfrom API.
+ * Parameters
+ *	void *m - The message to receive
+ *	int size - The size of this message
+ *	int sockid - The file descriptor to receive from
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int ptp_connection::recv_msg(void *m, int size, int sockid)
+{
+	return recvfrom_msg(m, size, sockid, (struct sockaddr *) &dest_sa, sizeof(dest_sa));
+}

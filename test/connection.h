@@ -47,4 +47,24 @@ public:
 };
 
 
+class ptp_connection : public connection {
+protected:
+	char iface[MAX_LEN];
+	char server_ip[MAX_LEN];
+	uint8_t addr[ETH_ALEN];
+	int iface_index;
+	sockaddr_ll dest_sa;
+	int ptp_open(const char *iface);
+	int find_iface_index(const char *iface);
+	bool str_to_l2_addr(char *str);
+public:
+	ptp_connection(char *ifc, char *ip = NULL);
+	int init_client(const char *server_name);
+	int init_server();
+	int send_msg(void *m, int size, int sockid);
+	int recv_msg(void *m, int size, int sockid = 0);
+	int accept_client(int *new_sockfd) { *new_sockfd = 0; return 0; }
+};
+
+
 #endif

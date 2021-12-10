@@ -9,7 +9,7 @@
 
 using namespace std;
 
-connection server, client;
+connection *server, *client;
 
 /*******************************************************************************
  * Description
@@ -21,12 +21,16 @@ connection server, client;
  ******************************************************************************/
 void usage()
 {
-	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr]\n");
+	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr] [primary's PTP eth addr]\n");
 	PRINT("pri = This is the primary system and it needs to share its vsync with others\n");
 	PRINT("sec = This is the secondary system. More than one systems can be secondary.\n");
 	PRINT("\tIt will synchronize it's vsync to start with primary\n");
 	PRINT("primary's_name_or_ip_addr = Only needed for secondary systems. This is the primary\n");
 	PRINT("\tsystem's hostname or IP address so that secondary system can communicate with it\n");
+	PRINT("\tNote that if you using PTP, then this is the primary's PTP interface (ex:enp176s0)\n");
+	PRINT("primary's_ptp_eth_addr = Only needed for secondary systems. If we are using PTP\n");
+	PRINT("protocol, then this is the primary system's PTP interface's ethernet address\n");
+	PRINT("(ex:84:47:09:04:eb:0e)\n");
 }
 
 /*******************************************************************************
@@ -40,8 +44,11 @@ void usage()
 void close_signal(int sig)
 {
 	DBG("Closing server's socket\n");
-	server.close_server();
+	server->close_server();
+	delete server;
+	server = NULL;
 	vsync_lib_uninit();
+	exit(1);
 }
 
 /*******************************************************************************
@@ -66,85 +73,6 @@ void print_vsyncs(char *msg, long *va, int sz)
 
 /*******************************************************************************
  * Description
- *	do_msg - This function is used by the server side to get last 10 vsyncs, send
- *	them to the client and receive an ACK from it. Once reveived, it terminates
- *	connection with the client.
- * Parameters
- *	int new_sockfd - The socket on which we need to communicate with the client
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
-int do_msg(int new_sockfd)
-{
-	int ret = 0;
-	msg m, r;
-	long *va = m.get_va();
-	int sz = m.get_size();
-
-	if(get_vsync(va, sz)) {
-		close(new_sockfd);
-		return 1;
-	}
-
-	print_vsyncs((char *) "", va, sz);
-	do {
-		m.add_vsync();
-		if(server.send_msg(&m, sizeof(m), new_sockfd)) {
-			ret = 1;
-			break;
-		}
-		INFO("Sent vsyncs to the secondary system\n");
-
-		if(server.recv_msg(&r, sizeof(r), new_sockfd)) {
-			ret = 1;
-			break;
-		}
-
-	} while(r.get_type() != ACK);
-
-	close(new_sockfd);
-	return ret;
-}
-
-/*******************************************************************************
- * Description
- *	do_primary - This function takes all the actions of the primary system which
- *	are to initialize the server, wait for any clients, dispatch a function to
- *	handle each client and then wait for another client to join until the user
- *	Ctrl+C's out.
- * Parameters
- *	NONE
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
-int do_primary()
-{
-	if(server.init_server()) {
-		ERR("Failed to init socket connection\n");
-		return 1;
-	}
-
-	signal(SIGINT, close_signal);
-	signal(SIGTERM, close_signal);
-
-	while(1) {
-		int new_socket;
-		INFO("Waiting for clients\n");
-		if(server.accept_client(&new_socket)) {
-			return 1;
-		}
-		INFO("Accepted client\n");
-
-		if(do_msg(new_socket)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/*******************************************************************************
- * Description
  *	find_avg - This function finds the average of all the vertical syncs that
  *	have been provided by the primary system to the secondary.
  * Parameters
@@ -164,19 +92,113 @@ long find_avg(long *va, int sz)
 
 /*******************************************************************************
  * Description
+ *	do_msg - This function is used by the server side to get last 10 vsyncs, send
+ *	them to the client and receive an ACK from it. Once reveived, it terminates
+ *	connection with the client.
+ * Parameters
+ *	int new_sockfd - The socket on which we need to communicate with the client
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int do_msg(int new_sockfd)
+{
+	int ret = 0;
+	msg m, r;
+	long *va = m.get_va();
+	int	sz = m.get_size();
+
+	do {
+		memset(&m, 0, sizeof(m));
+
+		if(server->recv_msg(&r, sizeof(r), new_sockfd)) {
+			ret = 1;
+			break;
+		}
+
+		if(get_vsync(va, sz)) {
+			close(new_sockfd);
+			return 1;
+		}
+
+		print_vsyncs((char *) "", va, sz);
+		m.add_vsync();
+
+		if(server->send_msg(&m, sizeof(m), new_sockfd)) {
+			ret = 1;
+			break;
+		}
+		INFO("Sent vsyncs to the secondary system\n");
+
+	} while(r.get_type() != ACK);
+
+	close(new_sockfd);
+	return ret;
+}
+
+/*******************************************************************************
+ * Description
+ *	do_primary - This function takes all the actions of the primary system which
+ *	are to initialize the server, wait for any clients, dispatch a function to
+ *	handle each client and then wait for another client to join until the user
+ *	Ctrl+C's out.
+ * Parameters
+ *	char *ptp_if - This is the PTP interface provided by the user on command
+ *	line. It can also be NULL, in which case they would rather have us
+ *	communicate via TCP.
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int do_primary(char *ptp_if)
+{
+	if(ptp_if) {
+		server = new ptp_connection(ptp_if);
+	} else {
+		server = new connection();
+	}
+
+	if(server->init_server()) {
+		ERR("Failed to init socket connection\n");
+		return 1;
+	}
+
+	signal(SIGINT, close_signal);
+	signal(SIGTERM, close_signal);
+
+	while(1) {
+		int new_socket;
+		INFO("Waiting for clients\n");
+		if(server->accept_client(&new_socket)) {
+			return 1;
+		}
+		INFO("Accepted client\n");
+
+		if(do_msg(new_socket)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/*******************************************************************************
+ * Description
  *	do_secondary - This function takes all the actions of the secondary system
  *	which are to initialize the client, receive the vsyncs from the server, send
  *	it an ack back, finds its own vsync, calculate the delta between the two
  *	and then synchronize its vsyncs to the primary systems.
  * Parameters
- *	char *server_name_or_ip_addr - The server's hostname or IP address
+ *	char *server_name_or_ip_addr - The server's hostname or IP address. In case,
+ *	the user wants us to communicate over PTP, then this holds the server's PTP
+ *	interface
+ *	char *ptp_eth_address - In case, the user wants us to communicate over PTP,
+ *	this holds the server's PTP interfaces' ethernet address.
  *	int synchronize - Whether to synchronize or not.
  *		0 = do not synchronize, just exit after getting vblanks
  *		1 = synchronize the secondary to primary's vsyncs
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int do_secondary(char *server_name_or_ip_addr, int synchronize)
+int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchronize)
 {
 	msg m, r;
 	int ret = 0;
@@ -184,19 +206,26 @@ int do_secondary(char *server_name_or_ip_addr, int synchronize)
 	long *va;
 	int sz;
 
-	if(client.init_client(server_name_or_ip_addr)) {
+	if(ptp_eth_address) {
+		client = new ptp_connection(server_name_or_ip_addr, ptp_eth_address);
+	} else {
+		client = new connection();
+	}
+
+	if(client->init_client(server_name_or_ip_addr)) {
 		return 1;
 	}
 
 	do {
-		if(client.recv_msg(&m, sizeof(m))) {
+		r.ack();
+		if(client->send_msg(&r, sizeof(r))) {
 			ret = 1;
 		}
 
-		ret == 0 ? r.ack() : r.nack();
-		if(client.send_msg(&r, sizeof(r))) {
+		if(client->recv_msg(&m, sizeof(m))) {
 			ret = 1;
 		}
+
 	} while(ret);
 	INFO("Received vsyncs from the primary system\n");
 
@@ -249,9 +278,9 @@ int do_secondary(char *server_name_or_ip_addr, int synchronize)
 int main(int argc, char *argv[])
 {
 	int ret = 0;
-	if((argc == 2 && strcasecmp(argv[1], "pri")) ||
-		((argc == 3  || argc == 4) && strcasecmp(argv[1], "sec")) ||
-		(argc < 2 || argc > 4)) {
+	if(!(((argc == 2 || argc == 3) && !strcasecmp(argv[1], "pri")) ||
+		((argc == 3  || argc == 4 || argc == 5) && !strcasecmp(argv[1], "sec"))) ||
+		(argc < 2 || argc > 5)) {
 		ERR("Invalid parameters\n");
 		usage();
 		return 1;
@@ -263,11 +292,33 @@ int main(int argc, char *argv[])
 	}
 
 	if(!strcasecmp(argv[1], "pri")) {
-		ret = do_primary();
+		ret = do_primary(argc == 3 ? argv[2] : NULL);
 	} else if(!strcasecmp(argv[1], "sec")) {
-		ret = do_secondary(argv[2], argc == 4 ? atoi(argv[3]) : 1);
+		switch(argc) {
+			case 3:
+				ret = do_secondary(argv[2], NULL, 1);
+			break;
+			case 4:
+				if(strchr(argv[3], ':')) {
+					ret = do_secondary(argv[2], argv[3], 1);
+				} else {
+					ret = do_secondary(argv[2], NULL, atoi(argv[3]));
+				}
+			break;
+			case 5:
+				ret = do_secondary(argv[2], argv[3], atoi(argv[4]));
+			break;
+		}
 	}
 
+	if(client) {
+		delete client;
+		client = NULL;
+	}
+	if(server) {
+		delete server;
+		server = NULL;
+	}
 	vsync_lib_uninit();
 	return ret;
 }
