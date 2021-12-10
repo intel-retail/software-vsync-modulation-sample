@@ -122,6 +122,7 @@ int do_msg(int new_sockfd)
 
 		print_vsyncs((char *) "", va, sz);
 		m.add_vsync();
+		m.add_time();
 
 		if(server->send_msg(&m, sizeof(m), new_sockfd)) {
 			ret = 1;
@@ -224,6 +225,7 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 		if(client->recv_msg(&m, sizeof(m))) {
 			ret = 1;
 		}
+		m.compare_time();
 
 	} while(ret);
 	INFO("Received vsyncs from the primary system\n");
