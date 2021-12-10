@@ -211,6 +211,7 @@ int connection::accept_client(int *new_sockfd)
 		/*ERR("accept function failed\n"); */
 		return 1;
 	}
+	INFO("Accepted client\n");
 
 	return 0;
 }

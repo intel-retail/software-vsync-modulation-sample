@@ -170,7 +170,6 @@ int do_primary(char *ptp_if)
 		if(server->accept_client(&new_socket)) {
 			return 1;
 		}
-		INFO("Accepted client\n");
 
 		if(do_msg(new_socket)) {
 			return 1;
@@ -240,10 +239,10 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	print_vsyncs((char *) "SECONDARY'S", client_vsync, MAX_TIMESTAMPS);
 	delta = client_vsync[0] - va[sz-1];
 	avg = find_avg(va, sz);
-	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
+	INFO("Time average of the vsyncs on the primary system is %ld us\n", avg);
 	avg = find_avg(client_vsync, MAX_TIMESTAMPS);
-	INFO("Time average of the vsyncs on the secondary system is %ld\n", avg);
-	INFO("Time difference between secondary and primary is %ld\n", delta);
+	INFO("Time average of the vsyncs on the secondary system is %ld us\n", avg);
+	INFO("Time difference between secondary and primary is %ld us\n", delta);
 	/*
 	 * If the primary is ahead or behind the secondary by more than a vsync,
 	 * we can just adjust the secondary's vsync to what we think the primary's
@@ -257,7 +256,7 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	 */
 	if(delta > avg || delta < avg) {
 		delta %= avg;
-		INFO("Time difference between secondary and primary's next vsync is %ld\n", delta);
+		INFO("Time difference between secondary and primary's next vsync is %ld us\n", delta);
 	}
 
 	if(synchronize) {
