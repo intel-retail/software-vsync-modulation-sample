@@ -261,6 +261,27 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 		INFO("Time difference between secondary and primary's next vsync is %ld us\n", delta);
 	}
 
+	/*
+	 * If the time difference between primary and secondary is larger than the
+	 * mid point of secondary's vsync time period, then it makes sense to sync
+	 * with the next vsync of the primary. For example, say primary's vsyncs
+	 * are happening at a regular cadence of 0, 16.66, 33.33 ms while
+	 * secondary's vsyncs are happening at a regular candence of 10, 26.66,
+	 * 43.33 ms, then the time difference between them is exactly 10 ms. If
+	 * we were to make the secondary faster for each iteration so that it
+	 * walks back those 10 ms and gets in sync with the primary, it would have
+	 * taken us about 600 iterations of vsyncs = 10 seconds. However, if were
+	 * to make the secondary slower for each iteration so that it walks forward
+	 * then since it is only 16.66 - 10 = 6.66 ms away from the next vsync of
+	 * the primary, it would take only 400 iterations of vsyncs = 6.66 seconds
+	 * to get in sync. Therefore, the general rule is that we should make
+	 * secondary's vsyncs walk back only if it the delta is less than half of
+	 * secondary's vsync time period, otherwise, we should walk forward.
+	 */
+	if(delta > avg/2) {
+		delta -= avg;
+	}
+
 	if(synchronize) {
 		synchronize_vsync((double) delta / 1000 );
 	}
