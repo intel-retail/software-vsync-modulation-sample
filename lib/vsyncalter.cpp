@@ -724,7 +724,7 @@ void synchronize_vsync(double time_diff)
 		return;
 	}
 
-	for(int i = COMBO; i < TOTAL_PHYS; i++) {
+	for(int i = DKL; i < TOTAL_PHYS; i++) {
 		synchronize_phys(i, time_diff);
 	}
 }
