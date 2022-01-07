@@ -301,7 +301,7 @@ static void timer_handler(int sig, siginfo_t *si, void *uc)
 		return;
 	}
 
-	PRINT("timer done\n");
+	DBG("timer done\n");
 	if(ui->get_type() == DKL) {
 		dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
 		program_dkl_mmio(dr, 0);
@@ -417,7 +417,7 @@ int find_enabled_combo_phys()
 	enabled++;
 	combo_table[0].enabled = 1;
 	for(int phy = 0; phy < 5; phy++) {
-		PRINT("misc: 0x%X, val = 0x%X, dw0: 0x%X, enabled: %d\n", ICL_PHY_MISC(phy), ICL_PORT_COMP_DW0(phy),
+		DBG("misc: 0x%X, val = 0x%X, dw0: 0x%X, enabled: %d\n", ICL_PHY_MISC(phy), ICL_PORT_COMP_DW0(phy),
 				READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)),
 				(!(READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)) &
 				  ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
@@ -479,7 +479,7 @@ void program_dkl_phys(double time_diff)
 			shift *= -1;
 		}
 		int steps = calc_steps_to_sync(time_diff, shift);
-		PRINT("steps are %d\n", steps);
+		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(DKL, &dkl_table[i]);
 		make_timer((long) steps, ui);
 #endif
@@ -578,7 +578,7 @@ void program_combo_phys(double time_diff)
 		 */
 		combo_table[i].done = 0;
 		int steps = calc_steps_to_sync(time_diff, shift);
-		PRINT("steps are %d\n", steps);
+		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
 		make_timer((long) steps, ui);
 #endif
@@ -649,6 +649,7 @@ void program_combo_phys(double time_diff)
  ******************************************************************************/
 void check_if_dkl_done()
 {
+	TRACING();
 	for(int i = 0; i < ARRAY_SIZE(dkl_table); i++) {
 		while(!dkl_table[i].done) {
 			usleep(1000);
@@ -668,6 +669,7 @@ void check_if_dkl_done()
  ******************************************************************************/
 void check_if_combo_done()
 {
+	TRACING();
 	/* Wait to write back the original value */
 	for(int i = 0; i < ARRAY_SIZE(combo_table); i++) {
 		while(!combo_table[i].done) {

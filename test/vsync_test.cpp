@@ -228,7 +228,7 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 		m.compare_time();
 
 	} while(ret);
-	INFO("Received vsyncs from the primary system\n");
+	DBG("Received vsyncs from the primary system\n");
 
 	if(get_vsync(client_vsync, MAX_TIMESTAMPS)) {
 		return 1;
@@ -241,10 +241,10 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	print_vsyncs((char *) "SECONDARY'S", client_vsync, MAX_TIMESTAMPS);
 	delta = client_vsync[0] - va[sz-1];
 	avg = find_avg(va, sz);
-	INFO("Time average of the vsyncs on the primary system is %ld us\n", avg);
+	DBG("Time average of the vsyncs on the primary system is %ld us\n", avg);
 	avg = find_avg(client_vsync, MAX_TIMESTAMPS);
-	INFO("Time average of the vsyncs on the secondary system is %ld us\n", avg);
-	INFO("Time difference between secondary and primary is %ld us\n", delta);
+	DBG("Time average of the vsyncs on the secondary system is %ld us\n", avg);
+	DBG("Time difference between secondary and primary is %ld us\n", delta);
 	/*
 	 * If the primary is ahead or behind the secondary by more than a vsync,
 	 * we can just adjust the secondary's vsync to what we think the primary's
@@ -258,7 +258,6 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	 */
 	if(delta > avg || delta < avg) {
 		delta %= avg;
-		INFO("Time difference between secondary and primary's next vsync is %ld us\n", delta);
 	}
 
 	/*
@@ -281,6 +280,7 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	if(delta > avg/2) {
 		delta -= avg;
 	}
+	INFO("Time difference between secondary and primary's next vsync is %ld us\n", delta);
 
 	if(synchronize) {
 		synchronize_vsync((double) delta / 1000 );
