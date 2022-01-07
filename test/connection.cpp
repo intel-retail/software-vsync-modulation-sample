@@ -115,10 +115,6 @@ int connection::init_client(const char *server_name)
  ******************************************************************************/
 void connection::close_client()
 {
-	msg m;
-	m.close();
-	send_msg(&m, sizeof(m));
-	recv_msg(&m, sizeof(m));
 	close(sockfd);
 }
 
