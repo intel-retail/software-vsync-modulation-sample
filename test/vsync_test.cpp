@@ -10,6 +10,7 @@
 using namespace std;
 
 connection *server, *client;
+int client_done = 0;
 
 /*******************************************************************************
  * Description
@@ -21,7 +22,7 @@ connection *server, *client;
  ******************************************************************************/
 void usage()
 {
-	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr] [primary's PTP eth addr]\n");
+	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr] [primary's PTP eth addr] [sync after # us]\n");
 	PRINT("pri = This is the primary system and it needs to share its vsync with others\n");
 	PRINT("sec = This is the secondary system. More than one systems can be secondary.\n");
 	PRINT("\tIt will synchronize it's vsync to start with primary\n");
@@ -35,13 +36,13 @@ void usage()
 
 /*******************************************************************************
  * Description
- *	close_signal - This function closes the server's socket
+ *	server_close_signal - This function closes the server's socket
  * Parameters
  *	int sig - The signal that was received
  * Return val
  *	void
  ******************************************************************************/
-void close_signal(int sig)
+void server_close_signal(int sig)
 {
 	DBG("Closing server's socket\n");
 	server->close_server();
@@ -49,6 +50,20 @@ void close_signal(int sig)
 	server = NULL;
 	vsync_lib_uninit();
 	exit(1);
+}
+
+/*******************************************************************************
+ * Description
+ *	client_close_signal - This function closes the client's socket
+ * Parameters
+ *	int sig - The signal that was received
+ * Return val
+ *	void
+ ******************************************************************************/
+void client_close_signal(int sig)
+{
+	DBG("Closing client's socket\n");
+	client_done = 1;
 }
 
 /*******************************************************************************
@@ -105,7 +120,6 @@ int do_msg(int new_sockfd)
 	int ret = 0;
 	msg m, r;
 	long *va = m.get_va();
-	int	sz = m.get_size();
 
 	do {
 		memset(&m, 0, sizeof(m));
@@ -115,12 +129,12 @@ int do_msg(int new_sockfd)
 			break;
 		}
 
-		if(get_vsync(va, sz)) {
+		if(get_vsync(va, r.get_vblank_count())) {
 			close(new_sockfd);
 			return 1;
 		}
 
-		print_vsyncs((char *) "", va, sz);
+		print_vsyncs((char *) "", va, r.get_vblank_count());
 		m.add_vsync();
 		m.add_time();
 
@@ -162,8 +176,8 @@ int do_primary(char *ptp_if)
 		return 1;
 	}
 
-	signal(SIGINT, close_signal);
-	signal(SIGTERM, close_signal);
+	signal(SIGINT, server_close_signal);
+	signal(SIGTERM, server_close_signal);
 
 	while(1) {
 		int new_socket;
@@ -194,17 +208,22 @@ int do_primary(char *ptp_if)
  *	this holds the server's PTP interfaces' ethernet address.
  *	int synchronize - Whether to synchronize or not.
  *		0 = do not synchronize, just exit after getting vblanks
- *		1 = synchronize the secondary to primary's vsyncs
+ *		1 = Synchronize once and exit
+ *	int timestamps - How many timestamps to collect for primary and secondary
  * Return val
  *	int - 0 = SUCCESS, 1 = FAILURE
  ******************************************************************************/
-int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchronize)
+int do_secondary(
+	char *server_name_or_ip_addr,
+	char *ptp_eth_address,
+	int synchronize,
+	int timestamps)
 {
 	msg m, r;
 	int ret = 0;
 	long client_vsync[MAX_TIMESTAMPS], delta, avg;
 	long *va;
-	int sz;
+	static int counter = 0;
 
 	if(ptp_eth_address) {
 		client = new ptp_connection(server_name_or_ip_addr, ptp_eth_address);
@@ -213,11 +232,21 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	}
 
 	if(client->init_client(server_name_or_ip_addr)) {
+		delete client;
+		client = NULL;
+		return 1;
+	}
+
+	if(timestamps > MAX_TIMESTAMPS) {
+		ERR("Number of vsync timestamps to collect can't be greater than or equal to %d", MAX_TIMESTAMPS);
+		delete client;
+		client = NULL;
 		return 1;
 	}
 
 	do {
 		r.ack();
+		r.set_vblank_count(timestamps);
 		if(client->send_msg(&r, sizeof(r))) {
 			ret = 1;
 		}
@@ -230,19 +259,20 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	} while(ret);
 	DBG("Received vsyncs from the primary system\n");
 
-	if(get_vsync(client_vsync, MAX_TIMESTAMPS)) {
+	if(get_vsync(client_vsync, timestamps)) {
+		delete client;
+		client = NULL;
 		return 1;
 	}
 
 	va = m.get_va();
-	sz = m.get_size();
 
-	print_vsyncs((char *) "PRIMARY'S", va, sz);
-	print_vsyncs((char *) "SECONDARY'S", client_vsync, MAX_TIMESTAMPS);
-	delta = client_vsync[0] - va[sz-1];
-	avg = find_avg(va, sz);
+	print_vsyncs((char *) "PRIMARY'S", va, timestamps);
+	print_vsyncs((char *) "SECONDARY'S", client_vsync, timestamps);
+	delta = client_vsync[0] - va[timestamps-1];
+	avg = find_avg(va, timestamps);
 	DBG("Time average of the vsyncs on the primary system is %ld us\n", avg);
-	avg = find_avg(client_vsync, MAX_TIMESTAMPS);
+	avg = find_avg(client_vsync, timestamps);
 	DBG("Time average of the vsyncs on the secondary system is %ld us\n", avg);
 	DBG("Time difference between secondary and primary is %ld us\n", delta);
 	/*
@@ -283,8 +313,20 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
 	INFO("Time difference between secondary and primary's next vsync is %ld us\n", delta);
 
 	if(synchronize) {
-		synchronize_vsync((double) delta / 1000 );
+		if(abs(delta) > synchronize) {
+			synchronize_vsync((double) delta / 1000 );
+			INFO("Synchronizing after %d seconds\n", counter);
+			counter = 0;
+		}
+		counter++;
 	}
+
+	if(client) {
+		client->close_client();
+		delete client;
+		client = NULL;
+	}
+
 	return ret;
 }
 
@@ -299,7 +341,7 @@ int do_secondary(char *server_name_or_ip_addr, char *ptp_eth_address, int synchr
  ******************************************************************************/
 int main(int argc, char *argv[])
 {
-	int ret = 0;
+	int ret = 0, us_synchronize, timestamps = MAX_TIMESTAMPS;
 	if(!(((argc == 2 || argc == 3) && !strcasecmp(argv[1], "pri")) ||
 		((argc == 3  || argc == 4 || argc == 5) && !strcasecmp(argv[1], "sec"))) ||
 		(argc < 2 || argc > 5)) {
@@ -316,24 +358,38 @@ int main(int argc, char *argv[])
 	if(!strcasecmp(argv[1], "pri")) {
 		ret = do_primary(argc == 3 ? argv[2] : NULL);
 	} else if(!strcasecmp(argv[1], "sec")) {
+
+		signal(SIGINT, client_close_signal);
+		signal(SIGTERM, client_close_signal);
+
 		switch(argc) {
 			case 3:
-				ret = do_secondary(argv[2], NULL, 1);
+				ret = do_secondary(argv[2], NULL, 1, MAX_TIMESTAMPS);
 			break;
 			case 4:
 				if(strchr(argv[3], ':')) {
-					ret = do_secondary(argv[2], argv[3], 1);
+					ret = do_secondary(argv[2], argv[3], 1, MAX_TIMESTAMPS);
 				} else {
-					ret = do_secondary(argv[2], NULL, atoi(argv[3]));
+					ret = do_secondary(argv[2], NULL, atoi(argv[3]), MAX_TIMESTAMPS);
 				}
 			break;
 			case 5:
-				ret = do_secondary(argv[2], argv[3], atoi(argv[4]));
+				us_synchronize = atoi(argv[4]);
+
+				do {
+					ret = do_secondary(argv[2], argv[3], us_synchronize, timestamps);
+
+					if(us_synchronize != 0 && us_synchronize != 1) {
+						timestamps = 2;
+						sleep(1);
+					}
+				} while(us_synchronize != 0 && us_synchronize != 1 && !client_done && !ret);
 			break;
 		}
 	}
 
 	if(client) {
+		client->close_client();
 		delete client;
 		client = NULL;
 	}
