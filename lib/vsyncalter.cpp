@@ -122,13 +122,13 @@ typedef struct _vbl_info {
 
 
 typedef int  (*find_func)();
-typedef void (*program_func)(double time_diff);
+typedef void (*program_func)(double time_diff, timer_t *t);
 typedef void (*check_func)();
 
 int find_enabled_dkl_phys();
 int find_enabled_combo_phys();
-void program_dkl_phys(double time_diff);
-void program_combo_phys(double time_diff);
+void program_dkl_phys(double time_diff, timer_t *t);
+void program_combo_phys(double time_diff, timer_t *t);
 void check_if_dkl_done();
 void check_if_combo_done();
 
@@ -138,11 +138,12 @@ typedef struct _phy_funcs {
 	find_func find;
 	program_func program;
 	check_func check_if_done;
+	timer_t timer_id;
 } phy_funcs;
 
 phy_funcs phy[] = {
-	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done},
-	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done},
+	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done, 0},
+	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done, 0},
 };
 
 int g_dev_fd = 0;
@@ -329,16 +330,17 @@ static void timer_handler(int sig, siginfo_t *si, void *uc)
  * Parameters
  *	long expire_ms - The time period in ms after which the timer will fire.
  *	void *user_ptr - A pointer to pass to the timer handler
+ *	timer_t *t     - A pointer to a pointer where we need to store the timer
  * Return val
  *	int - 0 == SUCCESS, -1 = FAILURE
  ******************************************************************************/
-static int make_timer(long expire_ms, void *user_ptr)
+static int make_timer(long expire_ms, void *user_ptr, timer_t *t)
 {
 	struct sigevent         te;
 	struct itimerspec       its;
 	struct sigaction        sa;
 	int                     sig_no = SIGRTMIN;
-	timer_t                 timer_id;
+
 
 	/* Set up signal handler. */
 	sa.sa_flags = SA_SIGINFO;
@@ -353,13 +355,13 @@ static int make_timer(long expire_ms, void *user_ptr)
 	te.sigev_notify = SIGEV_SIGNAL;
 	te.sigev_signo = sig_no;
 	te.sigev_value.sival_ptr = user_ptr;
-	timer_create(CLOCK_REALTIME, &te, &timer_id);
+	timer_create(CLOCK_REALTIME, &te, t);
 
 	its.it_interval.tv_sec = 0;
 	its.it_interval.tv_nsec = TV_NSEC(expire_ms);
 	its.it_value.tv_sec = TV_SEC(expire_ms);
 	its.it_value.tv_nsec = TV_NSEC(expire_ms);
-	timer_settime(timer_id, 0, &its, NULL);
+	timer_settime(*t, 0, &its, NULL);
 
 	return 0;
 }
@@ -445,10 +447,11 @@ int find_enabled_combo_phys()
  *	double time_diff - This is the time difference in between the primary and the
  *	secondary systems in ms. If master is ahead of the slave , then the time
  *	difference is a positive number otherwise negative.
+ *	timer_t *t     - A pointer to a pointer where we need to store the timer
  * Return val
  *	void
  ******************************************************************************/
-void program_dkl_phys(double time_diff)
+void program_dkl_phys(double time_diff, timer_t *t)
 {
 	double shift = SHIFT;
 
@@ -481,7 +484,7 @@ void program_dkl_phys(double time_diff)
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(DKL, &dkl_table[i]);
-		make_timer((long) steps, ui);
+		make_timer((long) steps, ui, t);
 #endif
 		DBG("OLD VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
 				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
@@ -542,10 +545,11 @@ void program_dkl_phys(double time_diff)
  *	double time_diff - This is the time difference in between the primary and the
  *	secondary systems in ms. If master is ahead of the slave , then the time
  *	difference is a positive number otherwise negative.
+ *	timer_t *t     - A pointer to a pointer where we need to store the timer
  * Return val
  *	void
  ******************************************************************************/
-void program_combo_phys(double time_diff)
+void program_combo_phys(double time_diff, timer_t *t)
 {
 	double shift = SHIFT;
 
@@ -580,7 +584,7 @@ void program_combo_phys(double time_diff)
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
-		make_timer((long) steps, ui);
+		make_timer((long) steps, ui, t);
 #endif
 		DBG("OLD VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
 				combo_table[i].cfgcr0.orig_val, combo_table[i].cfgcr1.orig_val);
@@ -698,10 +702,11 @@ void synchronize_phys(int type, double time_diff)
 	}
 
 	/* Cycle through all the phys */
-	phy[type].program(time_diff);
+	phy[type].program(time_diff, &phy[type].timer_id);
 
 	/* Wait to write back the original values */
 	phy[type].check_if_done();
+	timer_delete(phy[type].timer_id);
 }
 
 /*******************************************************************************
