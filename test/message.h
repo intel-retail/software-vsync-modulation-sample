@@ -16,6 +16,7 @@ protected:
 	header_t header;
 	timeval tv;
 	long vsync_array[MAX_TIMESTAMPS];
+	int vblank_count;
 public:
 	void ack() {
 		header = ACK;
@@ -32,6 +33,9 @@ public:
 	void add_time() {
 		gettimeofday(&tv, 0);
 	}
+	void set_vblank_count(int vbl) {
+		vblank_count = vbl;
+	}
 
 	void compare_time() {
 		timeval tv_now, res;
@@ -44,6 +48,7 @@ public:
 	long *get_va() { return vsync_array; }
 	int get_size() { return MAX_TIMESTAMPS; }
 	int is_client_present() { return header != CLOSE_MSG; }
+	int get_vblank_count() { return vblank_count; }	
 };
 
 #endif
