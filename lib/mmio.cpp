@@ -1,0 +1,248 @@
+/*INTEL CONFIDENTIAL
+Copyright (C) 2022 Intel Corporation
+This software and the related documents are Intel copyrighted materials, and your use of them is governed by the express license under which they were provided to you ("License"). Unless the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without Intel's prior written permission.
+This software and the related documents are provided as is, with no express or implied warranties, other than those that are expressly stated in the License.
+*/
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include "mmio.h"
+#include <debug.h>
+
+
+unsigned char g_raw_device[256] = {0};
+gfx_pci_device g_device;
+unsigned char *g_mmio = NULL;
+unsigned char *g_mem = NULL;
+int g_fd = 0;
+int g_mmio_size = 0;
+int g_mem_size = 0;
+unsigned int cpu_offset=0;
+int g_init = 0;
+
+const int order = 32;
+const unsigned long polynom = 0x4c11db7;
+const int direct = 1;
+const unsigned long crcinit = 0xffffffff;
+const unsigned long crcxor = 0xffffffff;
+const int refin = 1;
+const int refout = 1;
+
+unsigned long crcmask;
+unsigned long crchighbit;
+unsigned long crcinit_direct;
+unsigned long crcinit_nondirect;
+unsigned long crctab[256];
+struct pci_device *pci_dev = NULL;
+
+/*******************************************************************************
+ * Description
+ *	intel_get_pci_device - Looks up the main graphics pci device using libpciaccess.
+ * Parameters
+ *	None
+ * Return val
+ *	struct pci_device * - The pci device or NULL in case of a failure
+ ******************************************************************************/
+struct pci_device *intel_get_pci_device(void)
+{
+	struct pci_device *pci_dev;
+	int error;
+
+	error = pci_system_init();
+	if(error) {
+		ERR("Couldn't initialize PCI system\n");
+		return NULL;
+	}
+
+	/* Grab the graphics card. Try the canonical slot first, then
+	 * walk the entire PCI bus for a matching device. */
+	pci_dev = pci_device_find_by_slot(0, 0, 2, 0);
+	if (pci_dev == NULL || pci_dev->vendor_id != 0x8086) {
+		struct pci_device_iterator *iter;
+		struct pci_id_match match;
+
+		match.vendor_id = 0x8086; /* Intel */
+		match.device_id = PCI_MATCH_ANY;
+		match.subvendor_id = PCI_MATCH_ANY;
+		match.subdevice_id = PCI_MATCH_ANY;
+
+		match.device_class = 0x3 << 16;
+		match.device_class_mask = 0xff << 16;
+
+		match.match_data = 0;
+
+		iter = pci_id_match_iterator_create(&match);
+		pci_dev = pci_device_next(iter);
+		pci_iterator_destroy(iter);
+	}
+
+	if(!pci_dev) {
+		ERR("Couldn't find Intel graphics card\n");
+		return NULL;
+	}
+
+	error = pci_device_probe(pci_dev);
+	if(error) {
+		ERR("Couldn't probe graphics card\n");
+		return NULL;
+	}
+
+	if (pci_dev->vendor_id != 0x8086) {
+		ERR("Graphics card is non-intel\n");
+		return NULL;
+	}
+
+	return pci_dev;
+}
+
+/*******************************************************************************
+ * Description
+ *	intel_mmio_use_pci_bar - Fill a mmio_data stucture with igt_mmio to point
+ *	at the mmio bar.
+ * Parameters
+ *	struct pci_device *pci_dev - intel graphics pci device
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
+{
+	int mmio_bar, mmio_size;
+	int error;
+
+	mmio_bar = 0;
+	mmio_size = MMIO_SIZE;
+
+	error = pci_device_map_range(pci_dev,
+				      pci_dev->regions[mmio_bar].base_addr,
+				      mmio_size,
+				      PCI_DEV_MAP_FLAG_WRITABLE,
+				      (void **) &g_mmio);
+
+	if(error) {
+		ERR("Couldn't map MMIO region\n");
+		return 1;
+	}
+	return 0;
+}
+
+/*******************************************************************************
+ * Description
+ *	map_mmio - This functions maps the MMIO region
+ * Parameters
+ *	NONE
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int map_mmio()
+{
+	pci_dev = intel_get_pci_device();
+	return intel_mmio_use_pci_bar(pci_dev);
+}
+
+
+/*******************************************************************************
+ * Description
+ *	map_cmn - This function can either map MMIO or regular video memory
+ * Parameters
+ *	int base_index - Which bar to map
+ *	int size - The size of memory to map
+ * Return val
+ *	int - 0 = SUCCESS, 1 = FAILURE
+ ******************************************************************************/
+int map_cmn(int base_index, int size)
+{
+	int found = 0;
+	loff_t base;
+	int ret_val = 1;
+	unsigned long read_size = sizeof(gfx_pci_device);
+	const char proc_filename[] = "/proc/bus/pci/00/02.0";
+	struct stat file_stats;
+	FILE *fp;
+	unsigned char **temp;
+	size_t bytes_read;
+
+	fp = fopen(proc_filename, "r");
+
+	if(!fp) {
+
+		ERR("Unable to open /proc/bus/pci/00/02.0\n");
+		ret_val = 0;
+
+	} else {
+
+		if(lstat(proc_filename, &file_stats) != 0) {
+
+			ERR("Couldn't get file information for"
+				"/PROC/bus/pci/00/02.0\n");
+			ret_val = 0;
+
+		} else {
+
+			memset(g_raw_device, 0, 256);
+
+			if((unsigned long) file_stats.st_size < sizeof(gfx_pci_device)) {
+				read_size = file_stats.st_size;
+			}
+
+			bytes_read = fread(g_raw_device, 1, 256, fp);
+			if(bytes_read != 256) {
+				ERR("Couldn't read 256 bytes of data from PCI space\n");
+				ret_val = 0;
+			} else {
+				memcpy(&g_device, g_raw_device, read_size);
+				found = 1;
+			}
+			fclose(fp);
+
+		} /* end if(lstat...) */
+
+		if(!found) {
+			ret_val = 0;
+		} else {
+
+			g_fd = open("/dev/mem",O_RDWR);
+			if(!g_fd) {
+				ERR("Could not open /dev/mem.\n");
+				ret_val = 0;
+			} else {
+
+				base = (loff_t)(g_device.base_addr[base_index]&0xffffff80000);
+				if(base_index == 0) {
+					temp = &g_mmio;
+					g_mmio_size = size;
+				} else {
+					temp = &g_mem;
+					g_mem_size = size;
+				}
+				*temp = (unsigned char *) mmap(NULL,
+						size, PROT_READ | PROT_WRITE, MAP_SHARED,
+						g_fd, base);
+
+				if(*temp == MAP_FAILED) {
+					ERR("Unable to mmap GMCH Registers: %s\n", strerror(errno));
+					ret_val = 0;
+				}
+			}
+		}
+	}
+	return ret_val;
+}
+
+/*******************************************************************************
+ * Description
+ *	close_mmio_handle - Unmap the memory range that was mapped during initialization
+ * Parameters
+ *	NONE
+ * Return val
+ *	void
+ ******************************************************************************/
+void close_mmio_handle()
+{
+	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
+}
+
