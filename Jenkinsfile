@@ -19,7 +19,7 @@ pipeline {
 
                         COVERITY_PROJECT_NAME = 'Software Vsync Modulation Sample'
                         COVERITY_PROJECT_VERSION = 'v1.0.0' // this is not the real version, just testing for report generation
-                        COVERITY_PREBUILD_SCRIPT = 'apt -qq install -y libdrm-dev libpciaccess-dev build-essential'
+                        COVERITY_PREBUILD_SCRIPT = 'apt update && apt -qq install -y libdrm-dev libpciaccess-dev build-essential'
                         COVERITY_BUILD_SCRIPT = 'make release'
                         COVERITY_CHECKER_CONFIG = '--concurrency --security --rule --enable-constraint-fpp --enable-fnptr --enable-virtual'
                         COVERITY_COMPILER = 'c++'
