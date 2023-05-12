@@ -16,8 +16,8 @@ typedef struct _gfx_pci_device {
 
 #define MMIO_SIZE 2*1024*1024
 #define MMIO_BAR  0
-#define READ_OFFSET_DWORD(b, x) (*((volatile uint32_t *) (b + x + cpu_offset)))
-#define WRITE_OFFSET_DWORD(b, x, y) ((*((volatile uint32_t *) (b + x + cpu_offset))) = y)
+#define READ_OFFSET_DWORD(x) (*((volatile uint32_t *) (g_mmio + x + cpu_offset)))
+#define WRITE_OFFSET_DWORD(x, y) ((*((volatile uint32_t *) (g_mmio + x + cpu_offset))) = y)
 #define IS_INIT() g_init
 
 extern unsigned int cpu_offset;

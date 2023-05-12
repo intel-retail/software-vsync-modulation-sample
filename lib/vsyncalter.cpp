@@ -60,7 +60,7 @@
 #define DKL_VISA_SERIALIZER(phy_num)  (PHY_NUM_BASE(phy_num) + 0x220)
 #define DKL_DCO(phy_num)              (PHY_NUM_BASE(phy_num) + 0x224)
 #define ARRAY_SIZE(a)                 (int) (sizeof(a)/sizeof(a[0]))
-#define READ_VAL(r, v)                combo_table[i].r.v = READ_OFFSET_DWORD(g_mmio, combo_table[i].r.addr);
+#define READ_VAL(r, v)                combo_table[i].r.v = READ_OFFSET_DWORD(combo_table[i].r.addr);
 
 typedef struct _reg {
 	int addr;
@@ -244,15 +244,15 @@ static inline int calc_steps_to_sync(double time_diff, double shift)
 void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 {
 #if !TESTING
-	WRITE_OFFSET_DWORD(g_mmio, pr->dkl_pll_div0.addr,
+	WRITE_OFFSET_DWORD(pr->dkl_pll_div0.addr,
 			mod ? pr->dkl_pll_div0.mod_val : pr->dkl_pll_div0.orig_val);
-	WRITE_OFFSET_DWORD(g_mmio, pr->dkl_visa_serializer.addr,
+	WRITE_OFFSET_DWORD(pr->dkl_visa_serializer.addr,
 			mod ? pr->dkl_visa_serializer.mod_val : pr->dkl_visa_serializer.orig_val);
-	WRITE_OFFSET_DWORD(g_mmio, pr->dkl_bias.addr,
+	WRITE_OFFSET_DWORD(pr->dkl_bias.addr,
 			mod ? pr->dkl_bias.mod_val : pr->dkl_bias.orig_val);
-	WRITE_OFFSET_DWORD(g_mmio, pr->dkl_ssc.addr,
+	WRITE_OFFSET_DWORD(pr->dkl_ssc.addr,
 			mod ? pr->dkl_ssc.mod_val : pr->dkl_ssc.orig_val);
-	WRITE_OFFSET_DWORD(g_mmio, pr->dkl_dco.addr,
+	WRITE_OFFSET_DWORD(pr->dkl_dco.addr,
 			mod ? pr->dkl_dco.mod_val  : pr->dkl_dco.orig_val);
 #endif
 }
@@ -272,7 +272,7 @@ void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 void program_combo_mmio(combo_phy_reg *pr, int mod)
 {
 #if !TESTING
-	WRITE_OFFSET_DWORD(g_mmio, pr->cfgcr0.addr,
+	WRITE_OFFSET_DWORD(pr->cfgcr0.addr,
 			mod ? pr->cfgcr0.mod_val : pr->cfgcr0.orig_val);
 #endif
 }
@@ -387,7 +387,7 @@ int find_enabled_dkl_phys()
 #else
 	unsigned int val;
 	for(int i = 0; i < ARRAY_SIZE(dkl_table); i++) {
-		val = READ_OFFSET_DWORD(g_mmio, dkl_table[i].dkl_pll_div0.addr);
+		val = READ_OFFSET_DWORD(dkl_table[i].dkl_pll_div0.addr);
 		if(val != 0 && val != 0xFFFFFFFF) {
 			dkl_table[i].enabled = 1;
 			enabled++;
@@ -420,15 +420,15 @@ int find_enabled_combo_phys()
 	combo_table[0].enabled = 1;
 	for(int phy = 0; phy < 5; phy++) {
 		DBG("misc: 0x%X, val = 0x%X, dw0: 0x%X, enabled: %d\n", ICL_PHY_MISC(phy), ICL_PORT_COMP_DW0(phy),
-				READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)),
-				(!(READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)) &
+				READ_OFFSET_DWORD(ICL_PHY_MISC(phy)),
+				(!(READ_OFFSET_DWORD(ICL_PHY_MISC(phy)) &
 				  ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
-				 (READ_OFFSET_DWORD(g_mmio, ICL_PORT_COMP_DW0(phy)) & COMP_INIT)));
+				 (READ_OFFSET_DWORD(ICL_PORT_COMP_DW0(phy)) & COMP_INIT)));
 	}
 	for(int phy = 0; phy < ARRAY_SIZE(combo_table); phy++) {
-		if((READ_OFFSET_DWORD(g_mmio, ICL_PHY_MISC(phy)) &
+		if((READ_OFFSET_DWORD(ICL_PHY_MISC(phy)) &
 					ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN) &&
-				(READ_OFFSET_DWORD(g_mmio, ICL_PORT_COMP_DW0(phy)) & COMP_INIT)) {
+				(READ_OFFSET_DWORD(ICL_PORT_COMP_DW0(phy)) & COMP_INIT)) {
 			combo_table[phy].enabled = 1;
 			enabled++;
 			DBG("Combo phy #%d is on\n", phy);
@@ -467,11 +467,11 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		dkl_table[i].dkl_ssc.orig_val = 0x400020ff;
 		dkl_table[i].dkl_dco.orig_val = 0xe4004080;
 #else
-		dkl_table[i].dkl_pll_div0.orig_val         = dkl_table[i].dkl_pll_div0.mod_val        = READ_OFFSET_DWORD(g_mmio, dkl_table[i].dkl_pll_div0.addr);
-		dkl_table[i].dkl_visa_serializer.orig_val  = dkl_table[i].dkl_visa_serializer.mod_val = READ_OFFSET_DWORD(g_mmio, dkl_table[i].dkl_visa_serializer.addr);
-		dkl_table[i].dkl_bias.orig_val             = dkl_table[i].dkl_bias.mod_val            = READ_OFFSET_DWORD(g_mmio, dkl_table[i].dkl_bias.addr);
-		dkl_table[i].dkl_ssc.orig_val              = dkl_table[i].dkl_ssc.mod_val             = READ_OFFSET_DWORD(g_mmio, dkl_table[i].dkl_ssc.addr);
-		dkl_table[i].dkl_dco.orig_val              = dkl_table[i].dkl_dco.mod_val             = READ_OFFSET_DWORD(g_mmio, dkl_table[i].dkl_dco.addr);
+		dkl_table[i].dkl_pll_div0.orig_val         = dkl_table[i].dkl_pll_div0.mod_val        = READ_OFFSET_DWORD(dkl_table[i].dkl_pll_div0.addr);
+		dkl_table[i].dkl_visa_serializer.orig_val  = dkl_table[i].dkl_visa_serializer.mod_val = READ_OFFSET_DWORD(dkl_table[i].dkl_visa_serializer.addr);
+		dkl_table[i].dkl_bias.orig_val             = dkl_table[i].dkl_bias.mod_val            = READ_OFFSET_DWORD(dkl_table[i].dkl_bias.addr);
+		dkl_table[i].dkl_ssc.orig_val              = dkl_table[i].dkl_ssc.mod_val             = READ_OFFSET_DWORD(dkl_table[i].dkl_ssc.addr);
+		dkl_table[i].dkl_dco.orig_val              = dkl_table[i].dkl_dco.mod_val             = READ_OFFSET_DWORD(dkl_table[i].dkl_dco.addr);
 		/*
 		 * For whichever PHY we find, let's set the done flag to 0 so that we can later
 		 * have a timer for it to reset the default values back in their registers
