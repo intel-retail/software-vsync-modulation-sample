@@ -25,7 +25,7 @@ $(BINNAME): $(OBJECTS)
 		strip -x $@; \
 	fi
 
-.cpp.o: $(HEADERS)
+.cpp.o:
 	@echo $<
 	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(INCLUDES) $< 
 
