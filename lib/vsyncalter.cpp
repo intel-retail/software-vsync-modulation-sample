@@ -14,7 +14,7 @@
 #include "mmio.h"
 #include "dkl.h"
 #include "combo.h"
-
+#include "i915_pciids.h"
 
 
 phy_funcs phy[] = {
@@ -22,7 +22,31 @@ phy_funcs phy[] = {
 	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done, 0},
 };
 
+ddi_sel adl_s_ddi_sel[] = {
+	/*name      de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num */
+	{"DDI_A",   1,      REG(DPCLKA_CFGCR0), 10,         0,                  0, },
+	{"DDI_C1",  4,      REG(DPCLKA_CFGCR0), 11,         2,                  0, },
+	{"DDI_C2",  5,      REG(DPCLKA_CFGCR0), 24,         4,                  0, },
+	{"DDI_C3",  6,      REG(DPCLKA_CFGCR1), 4,          0,                  0, },
+	{"DDI_C4",  7,      REG(DPCLKA_CFGCR1), 5,          2,                  0, },
+};
+
+ddi_sel tgl_ddi_sel[] = {
+	/*name      de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num */
+	{"DDI_A",   1,      REG(DPCLKA_CFGCR0), 10,         0,                  0, },
+	{"DDI_B",   2,      REG(DPCLKA_CFGCR0), 11,         2,                  0, },
+};
+
+
+platform platform_table[] = {
+	{"TGL",   INTEL_TGL_IDS,  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel)},
+	{"ADL_S", INTEL_ADLS_IDS, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel)},
+	{"ADL_P", INTEL_ADLP_IDS, tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel)},
+};
+
 int g_dev_fd = 0;
+int supported_platform = 0;
+list<ddi_sel *> *dpll_enabled_list = NULL;
 
 /*******************************************************************************
  * Description
@@ -62,14 +86,55 @@ void close_device()
  ******************************************************************************/
 int vsync_lib_init()
 {
+	int device_id, i, j;
 	if(!IS_INIT()) {
+		/* Get the device id of this platform */
+		device_id = get_device_id();
+		DBG("Device id is 0x%X\n", device_id);
+		/* Loop through our supported platform list */
+		for(i = 0; i < ARRAY_SIZE(platform_table); i++) {
+			for(j = 0; j < MAX_DEVICE_ID; j++) {
+				if(platform_table[i].device_ids[j] == device_id) {
+					break;
+				}
+			}
+			if(j != MAX_DEVICE_ID) {
+				break;
+			}
+		}
+		/* This means we aren't on one of the supported platforms */
+		if(i == ARRAY_SIZE(platform_table)) {
+			ERR("This platform is not supported. Device id is 0x%X\n", device_id);
+			return 1;
+		} else {
+			supported_platform = i;
+		}
+
 		if(map_mmio()) {
 			return 1;
 		}
-		g_init = 1;
+		INIT();
 	}
 
 	return 0;
+}
+
+/*******************************************************************************
+ * Description
+ *  cleanup_list - This function deallocates all members of the dpll_enabled_list
+ * Parameters
+ *	NONE
+ * Return val
+ *  void
+ ******************************************************************************/
+void cleanup_list()
+{
+	if(dpll_enabled_list) {
+		for(list<ddi_sel *>::iterator it = dpll_enabled_list->begin(); it != dpll_enabled_list->end(); it++) {
+			delete *it;
+		}
+		delete dpll_enabled_list;
+	}
 }
 
 /*******************************************************************************
@@ -84,8 +149,9 @@ int vsync_lib_init()
  ******************************************************************************/
 void vsync_lib_uninit()
 {
+	cleanup_list();
 	close_mmio_handle();
-	g_init = 0;
+	UNINIT();
 }
 
 
