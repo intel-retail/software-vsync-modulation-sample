@@ -19,7 +19,12 @@
 #define _RKL_COMBOPHY_D               0x161000
 #define _ADL_COMBOPHY_E               0x16B000
 #define _ICL_PORT_COMP                0x100
-#define _PICK(__index, ...)           (((const uint32_t []){ __VA_ARGS__ })[__index])
+#define DPLL0_CFGCR0                  0x164284
+#define DPLL0_CFGCR1                  0x164288
+#define DPLL1_CFGCR0                  0x16428C
+#define DPLL1_CFGCR1                  0x164290
+#define DPLL2_CFGCR0                  0x164294
+#define DPLL2_CFGCR1                  0x164298
 #define _ICL_COMBOPHY(phy)            _PICK(phy, _ICL_COMBOPHY_A, \
 			                               _ICL_COMBOPHY_B, \
 				                           _EHL_COMBOPHY_C, \
@@ -35,6 +40,11 @@ typedef struct _combo_phy_reg {
 	int enabled;
 	int done;
 } combo_phy_reg;
+
+typedef struct _div_val {
+	int bit;
+	int val;
+} div_val;
 
 extern combo_phy_reg combo_table[];
 
