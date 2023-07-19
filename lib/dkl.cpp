@@ -1,16 +1,17 @@
 #include <math.h>
 #include <debug.h>
 #include <signal.h>
+#include <unistd.h>
 #include "mmio.h"
 #include "dkl.h"
 
 dkl_phy_reg dkl_table[] = {
-	{{DKL_PLL_DIV0(0), 0, 0}, {DKL_VISA_SERIALIZER(0), 0, 0}, {DKL_BIAS(0), 0, 0}, {DKL_SSC(0), 0, 0}, {DKL_DCO(0), 0, 0}, 0, 1},
-	{{DKL_PLL_DIV0(1), 0, 0}, {DKL_VISA_SERIALIZER(1), 0, 0}, {DKL_BIAS(1), 0, 0}, {DKL_SSC(1), 0, 0}, {DKL_DCO(1), 0, 0}, 0, 1},
-	{{DKL_PLL_DIV0(2), 0, 0}, {DKL_VISA_SERIALIZER(2), 0, 0}, {DKL_BIAS(2), 0, 0}, {DKL_SSC(2), 0, 0}, {DKL_DCO(2), 0, 0}, 0, 1},
-	{{DKL_PLL_DIV0(3), 0, 0}, {DKL_VISA_SERIALIZER(3), 0, 0}, {DKL_BIAS(3), 0, 0}, {DKL_SSC(3), 0, 0}, {DKL_DCO(3), 0, 0}, 0, 1},
-	{{DKL_PLL_DIV0(4), 0, 0}, {DKL_VISA_SERIALIZER(4), 0, 0}, {DKL_BIAS(4), 0, 0}, {DKL_SSC(4), 0, 0}, {DKL_DCO(4), 0, 0}, 0, 1},
-	{{DKL_PLL_DIV0(5), 0, 0}, {DKL_VISA_SERIALIZER(5), 0, 0}, {DKL_BIAS(5), 0, 0}, {DKL_SSC(5), 0, 0}, {DKL_DCO(5), 0, 0}, 0, 1},
+	{REG(DKL_PLL_DIV0(0)), REG(DKL_VISA_SERIALIZER(0)), REG(DKL_BIAS(0)), REG(DKL_SSC(0)), REG(DKL_DCO(0)), 0, 1},
+	{REG(DKL_PLL_DIV0(1)), REG(DKL_VISA_SERIALIZER(1)), REG(DKL_BIAS(1)), REG(DKL_SSC(1)), REG(DKL_DCO(1)), 0, 1},
+	{REG(DKL_PLL_DIV0(2)), REG(DKL_VISA_SERIALIZER(2)), REG(DKL_BIAS(2)), REG(DKL_SSC(2)), REG(DKL_DCO(2)), 0, 1},
+	{REG(DKL_PLL_DIV0(3)), REG(DKL_VISA_SERIALIZER(3)), REG(DKL_BIAS(3)), REG(DKL_SSC(3)), REG(DKL_DCO(3)), 0, 1},
+	{REG(DKL_PLL_DIV0(4)), REG(DKL_VISA_SERIALIZER(4)), REG(DKL_BIAS(4)), REG(DKL_SSC(4)), REG(DKL_DCO(4)), 0, 1},
+	{REG(DKL_PLL_DIV0(5)), REG(DKL_VISA_SERIALIZER(5)), REG(DKL_BIAS(5)), REG(DKL_SSC(5)), REG(DKL_DCO(5)), 0, 1},
 };
 
 /*******************************************************************************
