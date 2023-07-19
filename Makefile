@@ -27,4 +27,4 @@ release: distclean
 	@$(MAKE) clean
 	@$(MAKE)
 	@mkdir release
-	@cp lib/*.so test/vsync_test release
+	@cp lib/*.so test/vsync_test synctest/synctest vbltest/vbltest release
