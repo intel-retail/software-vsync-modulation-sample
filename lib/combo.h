@@ -25,6 +25,9 @@
 #define DPLL1_CFGCR1                  0x164290
 #define DPLL2_CFGCR0                  0x164294
 #define DPLL2_CFGCR1                  0x164298
+#define DPLL3_CFGCR0                  0x1642C0
+#define DPLL3_CFGCR1                  0x1642C4
+
 #define _ICL_COMBOPHY(phy)            _PICK(phy, _ICL_COMBOPHY_A, \
 			                               _ICL_COMBOPHY_B, \
 				                           _EHL_COMBOPHY_C, \

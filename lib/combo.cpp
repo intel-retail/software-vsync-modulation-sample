@@ -11,7 +11,7 @@ combo_phy_reg combo_table[] = {
 	{REG(DPLL0_CFGCR0), REG(DPLL0_CFGCR1), 0, 1},
 	{REG(DPLL1_CFGCR0), REG(DPLL1_CFGCR1), 0, 1},
 	{REG(DPLL2_CFGCR0), REG(DPLL2_CFGCR1), 0, 1},
-//	{REG(DPLL3_CFGCR0), REG(DPLL3_CFGCR1), 0, 1},
+	{REG(DPLL3_CFGCR0), REG(DPLL3_CFGCR1), 0, 1},
 };
 
 /*******************************************************************************
