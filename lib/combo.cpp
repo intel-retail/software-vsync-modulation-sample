@@ -60,11 +60,6 @@ void find_enabled_dplls()
 	 * DDII_DE_CLK	                USBC2
 	 * DDIJ_DE_CLK	                USBC3
 	 * DDIK_DE_CLK	                USBC4
-
-	for(i = 0; i < 5; i++) {
-		val = READ_OFFSET_DWORD(DKL_PLL_DIV0(i));
-		DBG("0x%X = 0x%X\n", DKL_PLL_DIV0(i), val);
-	}
 	*/
 
 	for(i = 0; i < ARRAY_SIZE(trans_ddi_func_ctl); i++) {
@@ -110,14 +105,6 @@ void find_enabled_dplls()
 			}
 		}
 	}
-	val = READ_OFFSET_DWORD(DPLL0_CFGCR0);
-	DBG("DPLL0_CFGCR0 num = 0x%X\n", val);
-	val = READ_OFFSET_DWORD(DPLL0_CFGCR1);
-	DBG("DPLL0_CFGCR1 num = 0x%X\n", val);
-	val = READ_OFFSET_DWORD(DPLL1_CFGCR0);
-	DBG("DPLL1_CFGCR0 num = 0x%X\n", val);
-	val = READ_OFFSET_DWORD(DPLL1_CFGCR1);
-	DBG("DPLL1_CFGCR1 num = 0x%X\n", val);
 }
 
 /*******************************************************************************
