@@ -261,8 +261,6 @@ void program_combo_phys(double time_diff, timer_t *t)
 			i_fbdiv_intgr_9_0 -= 1;
 			new_ro_div_bias_frac += 0xFFFFF;
 		}
-		combo_table[i].cfgcr0.mod_val &= ~GENMASK(9, 0);
-		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		double new_i_fbdivfrac_14_0  = ((long int) new_ro_div_bias_frac & ~BIT(19)) >> 5;
 
 		DBG("old pll_freq \t %f\n", pll_freq);
@@ -276,7 +274,8 @@ void program_combo_phys(double time_diff, timer_t *t)
 		DBG("new fbdivfrac \t 0x%X\n", (int) new_i_fbdivfrac_14_0);
 		DBG("new ro_div_frac \t 0x%X\n", (int) new_ro_div_bias_frac);
 
-		combo_table[i].cfgcr0.mod_val &= ~GENMASK(24, 10);
+		combo_table[i].cfgcr0.mod_val &= ~GENMASK(24, 0);
+		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		combo_table[i].cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
 
 		DBG("NEW VALUES\n cfgcr0 \t 0x%X\n", combo_table[i].cfgcr0.mod_val);
