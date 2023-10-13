@@ -154,7 +154,7 @@ int map_mmio()
 	if(!pci_dev) {
 		pci_dev = intel_get_pci_device();
 	}
-	return intel_mmio_use_pci_bar(pci_dev);
+	return pci_dev ? intel_mmio_use_pci_bar(pci_dev) : 0;
 }
 
 
