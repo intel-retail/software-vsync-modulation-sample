@@ -399,11 +399,39 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 		info->vsync_array[info->counter++] = TIME_IN_USEC(sec, usec);
 	}
 
-	vbl.request.type = (drmVBlankSeqType) (DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT);
+	vbl.request.type = (drmVBlankSeqType) (DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT |
+		pipe_to_wait_for(info->pipe));
 	vbl.request.sequence = 1;
 	vbl.request.signal = (unsigned long)data;
 
 	drmWaitVBlank(g_dev_fd, &vbl);
+}
+
+/*******************************************************************************
+ * Description
+ *  get_vsync - This function determines the type of vblank synchronization to
+ *	use for the output.
+ *Parameters
+ * int pipe - Indicates which CRTC to get vblank for.  Knowing this, we
+ *	can determine which vblank sequence type to use for it.  Traditional
+ *	cards had only two CRTCs, with CRTC 0 using no special flags, and
+ *	CRTC 1 using DRM_VBLANK_SECONDARY.  The first bit of the pipe
+ *	Bits 1-5 of the pipe parameter are 5 bit wide pipe number between
+ *	0-31.  If this is non-zero it indicates we're dealing with a
+ *	multi-gpu situation and we need to calculate the vblank sync
+ *	using DRM_BLANK_HIGH_CRTC_MASK.
+ * Return val
+ *  int - The flag to OR in for drmWaitVBlank API
+ ******************************************************************************/
+unsigned int pipe_to_wait_for(int pipe)
+{
+	int ret = 0;
+	if (pipe > 1) {
+		ret = (pipe << DRM_VBLANK_HIGH_CRTC_SHIFT) & DRM_VBLANK_HIGH_CRTC_MASK;
+	} else if (pipe > 0) {
+		ret = DRM_VBLANK_SECONDARY;
+	}
+	return ret;
 }
 
 /*******************************************************************************
@@ -414,10 +442,12 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
  *	long *vsync_array - The array in which vsync timestamps need to be given
  *	int size - The size of this array. This is also the number of times that we
  *	need to get the next few vsync timestamps.
+ *	int pipe - This is the pipe whose vblank is needed. Defaults to 0 if not
+ *	provided.
  * Return val
  *  int - 0 == SUCCESS, -1 = ERROR
  ******************************************************************************/
-int get_vsync(long *vsync_array, int size)
+int get_vsync(long *vsync_array, int size, int pipe)
 {
 	drmVBlank vbl;
 	int ret;
@@ -435,9 +465,12 @@ int get_vsync(long *vsync_array, int size)
 	handler_info.vsync_array = vsync_array;
 	handler_info.size = size;
 	handler_info.counter = 0;
+	handler_info.pipe = pipe;
 
 	/* Queue an event for frame + 1 */
-	vbl.request.type = (drmVBlankSeqType) (DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT);
+	vbl.request.type = (drmVBlankSeqType)
+		(DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT | pipe_to_wait_for(pipe));
+	DBG("vbl.request.type = 0x%X\n", vbl.request.type);
 	vbl.request.sequence = 1;
 	vbl.request.signal = (unsigned long)&handler_info;
 	ret = drmWaitVBlank(g_dev_fd, &vbl);
