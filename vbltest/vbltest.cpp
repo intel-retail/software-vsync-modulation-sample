@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	client_vsync = new long[size];
 
 	if(get_vsync(client_vsync, size)) {
-		delete client_vsync;
+		delete [] client_vsync;
 		vsync_lib_uninit();
 		return 1;
 	}
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 	print_vsyncs((char *) "", client_vsync, size);
 	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
 
-	delete client_vsync;
+	delete [] client_vsync;
 	vsync_lib_uninit();
 	return ret;
 }
