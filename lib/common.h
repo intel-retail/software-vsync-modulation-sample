@@ -60,6 +60,7 @@ typedef struct _vbl_info {
 	long *vsync_array;
 	int size;
 	int counter;
+	int pipe;
 } vbl_info;
 
 typedef int  (*find_func)();
@@ -98,5 +99,6 @@ extern list<ddi_sel *> *dpll_enabled_list;
 int calc_steps_to_sync(double time_diff, double shift);
 void timer_handler(int sig, siginfo_t *si, void *uc);
 int make_timer(long expire_ms, void *user_ptr, timer_t *t);
+unsigned int pipe_to_wait_for(int pipe);
 
 #endif
