@@ -130,6 +130,22 @@ int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 
 /*******************************************************************************
  * Description
+ *	get_device_id - This functions gets the deivce ID of the device
+ * Parameters
+ *	NONE
+ * Return val
+ *	int - device_id (ex 4680 = SUCCESS, 0 = FAILURE
+ ******************************************************************************/
+int get_device_id()
+{
+	if(!pci_dev) {
+		pci_dev = intel_get_pci_device();
+	}
+	return pci_dev ? pci_dev->device_id : 0;
+}
+
+/*******************************************************************************
+ * Description
  *	map_mmio - This functions maps the MMIO region
  * Parameters
  *	NONE
@@ -138,7 +154,9 @@ int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
  ******************************************************************************/
 int map_mmio()
 {
-	pci_dev = intel_get_pci_device();
+	if(!pci_dev) {
+		pci_dev = intel_get_pci_device();
+	}
 	return intel_mmio_use_pci_bar(pci_dev);
 }
 
