@@ -11,22 +11,42 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <xf86drm.h>
-#include <list>
-#include "common.h"
 #include "mmio.h"
+#include "dkl.h"
+#include "combo.h"
 #include "i915_pciids.h"
 
-using namespace std;
 
-trans_reg pipe_reg_table[] = {
-	{REG(TRANS_VBLANK_A),   REG(TRANS_VTOTAL_A),   0 , 0, 0},
-	{REG(TRANS_VBLANK_B),   REG(TRANS_VTOTAL_B),   0 , 0, 0},
-	{REG(TRANS_VBLANK_C),   REG(TRANS_VTOTAL_C),   0 , 0, 0},
-	{REG(TRANS_VBLANK_D),   REG(TRANS_VTOTAL_D),   0 , 0, 0},
-	{REG(TRANS_VBLANK_EDP), REG(TRANS_VTOTAL_EDP), 0 , 0, 0},
+phy_funcs phy[] = {
+	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done, 0},
+	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done, 0},
+};
+
+ddi_sel adl_s_ddi_sel[] = {
+	/*name      de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num */
+	{"DDI_A",   1,      REG(DPCLKA_CFGCR0), 10,         0,                  0, },
+	{"DDI_C1",  4,      REG(DPCLKA_CFGCR0), 11,         2,                  0, },
+	{"DDI_C2",  5,      REG(DPCLKA_CFGCR0), 24,         4,                  0, },
+	{"DDI_C3",  6,      REG(DPCLKA_CFGCR1), 4,          0,                  0, },
+	{"DDI_C4",  7,      REG(DPCLKA_CFGCR1), 5,          2,                  0, },
+};
+
+ddi_sel tgl_ddi_sel[] = {
+	/*name      de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num */
+	{"DDI_A",   1,      REG(DPCLKA_CFGCR0), 10,         0,                  0, },
+	{"DDI_B",   2,      REG(DPCLKA_CFGCR0), 11,         2,                  0, },
+};
+
+
+platform platform_table[] = {
+	{"TGL",   INTEL_TGL_IDS,  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel)},
+	{"ADL_S", INTEL_ADLS_IDS, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel)},
+	{"ADL_P", INTEL_ADLP_IDS, tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel)},
 };
 
 int g_dev_fd = 0;
+int supported_platform = 0;
+list<ddi_sel *> *dpll_enabled_list = NULL;
 
 /*******************************************************************************
  * Description
@@ -66,7 +86,30 @@ void close_device()
  ******************************************************************************/
 int vsync_lib_init()
 {
+	int device_id, i, j;
 	if(!IS_INIT()) {
+		/* Get the device id of this platform */
+		device_id = get_device_id();
+		DBG("Device id is 0x%X\n", device_id);
+		/* Loop through our supported platform list */
+		for(i = 0; i < ARRAY_SIZE(platform_table); i++) {
+			for(j = 0; j < MAX_DEVICE_ID; j++) {
+				if(platform_table[i].device_ids[j] == device_id) {
+					break;
+				}
+			}
+			if(j != MAX_DEVICE_ID) {
+				break;
+			}
+		}
+		/* This means we aren't on one of the supported platforms */
+		if(i == ARRAY_SIZE(platform_table)) {
+			ERR("This platform is not supported. Device id is 0x%X\n", device_id);
+			return 1;
+		} else {
+			supported_platform = i;
+		}
+
 		if(map_mmio()) {
 			return 1;
 		}
@@ -74,6 +117,24 @@ int vsync_lib_init()
 	}
 
 	return 0;
+}
+
+/*******************************************************************************
+ * Description
+ *  cleanup_list - This function deallocates all members of the dpll_enabled_list
+ * Parameters
+ *	NONE
+ * Return val
+ *  void
+ ******************************************************************************/
+void cleanup_list()
+{
+	if(dpll_enabled_list) {
+		for(list<ddi_sel *>::iterator it = dpll_enabled_list->begin(); it != dpll_enabled_list->end(); it++) {
+			delete *it;
+		}
+		delete dpll_enabled_list;
+	}
 }
 
 /*******************************************************************************
@@ -88,170 +149,37 @@ int vsync_lib_init()
  ******************************************************************************/
 void vsync_lib_uninit()
 {
+	cleanup_list();
 	close_mmio_handle();
 	UNINIT();
 }
 
+
 /*******************************************************************************
  * Description
- *	print_time - This function prints the current time
+ *	synchronize_phys - This function finds enabled phys, synchronizes them and
+ *	waits for the sync to finish
  * Parameters
- *	NONE
+ *	int type - Whether it is a DKL or a Combo phy
+ *	double time_diff - This is the time difference in between the primary and the
+ *	secondary systems in ms. If master is ahead of the slave , then the time
+ *	difference is a positive number otherwise negative.
  * Return val
  *	void
  ******************************************************************************/
-static void print_time()
+void synchronize_phys(int type, double time_diff)
 {
-	struct timeval t;
-	gettimeofday(&t,NULL);
-	DBG("Time is %ld.%ld\n", t.tv_sec, t.tv_usec);
-}
-
-/*******************************************************************************
- * Description
- *	pipe_find - This function finds the number of pipes that are currently
- *	enabled. It does so by going through a list of Vblank and Vtotal registers
- *	for currently known pipes for all current platforms and checks if they have a
- *	valid value in them. It further checks if the vertical total is at least one
- *	more than vertical blank because that is what we will be manipulating to
- *	synchronize the vsyncs.
- * Parameters
- *	NONE
- * Return val
- *	int - The total number of pipes that were found to be enabled
- ******************************************************************************/
-int pipe_find()
-{
-	unsigned int vblank, vtotal, active, total;
-	int enabled = 0;
-	TRACING();
-
-	for(int i = 0; i < ARRAY_SIZE(pipe_reg_table); i++) {
-		vblank = READ_OFFSET_DWORD(pipe_reg_table[i].vblank.addr);
-		/* vblank must have a valid value in it */
-		if(vblank != 0 && vblank != 0xFFFFFFFF) {
-			vtotal = READ_OFFSET_DWORD(pipe_reg_table[i].vtotal.addr);
-			active = GETBITS_VAL(vtotal, 12, 0);
-			total = GETBITS_VAL(vtotal, 28, 16);
-			/* Total must be at least one more than active */
-			if(total > active+1) {
-				pipe_reg_table[i].enabled = 1;
-				enabled++;
-				DBG("Pipe #%d is on\n", i);
-			} else {
-				ERR("VTOTAL doesn't have even one line after VACTIVE. Vtotal = %d, Vactive = %d\n", total, active);
-			}
-		}
+	if(!phy[type].find()) {
+		DBG("No %s PHYs found\n", phy[type].name);
+		return;
 	}
-	DBG("Total pipes on: %d\n", enabled);
-	return enabled;
-}
 
-/*******************************************************************************
- * Description
- *	calc_reg_vals - This function finds out the current and to be altered values
- *	for a register (Vblank or Vtotal)
- * Parameters
- *	reg *r - The register pointer with the address and whose current and mod
- *	values need to be stored
- *	int shift - A positive or negative shift to be made to the register
- * Return val
- *	void
- ******************************************************************************/
-void calc_reg_vals(reg *r, int shift)
-{
-	unsigned int total;
-	r->orig_val = r->mod_val = READ_OFFSET_DWORD(r->addr);
-	total = GETBITS_VAL(r->orig_val, 28, 16);
-	total -= shift;
-	r->mod_val &= ~GENMASK(28, 16);
-	r->mod_val |= total<<16;
-}
+	/* Cycle through all the phys */
+	phy[type].program(time_diff, &phy[type].timer_id);
 
-/*******************************************************************************
- * Description
- *	program_regs - This function writes either the original or the altered value
- *	of the vblank and vtotal registers.
- * Parameters
- *	trans_reg *tr - The register whose value needs to be written
- *	int mod - 0 = write original value, 1 = write modified value
- * Return val
- *	void
- ******************************************************************************/
-void program_regs(trans_reg *tr, int mod)
-{
-	DBG("Writing to Vblank addr = 0x%X, with a value of 0x%X\n",
-		tr->vblank.addr, mod ? tr->vblank.mod_val : tr->vblank.orig_val);
-	WRITE_OFFSET_DWORD(tr->vblank.addr, mod ? tr->vblank.mod_val : tr->vblank.orig_val);
-	DBG("Writing to Vtotal addr = 0x%X, with a value of 0x%X\n",
-		tr->vtotal.addr, mod ? tr->vtotal.mod_val : tr->vtotal.orig_val);
-	WRITE_OFFSET_DWORD(tr->vtotal.addr, mod ? tr->vtotal.mod_val : tr->vtotal.orig_val);
-}
-
-/*******************************************************************************
- * Description
- *	pipe_program - This function programs the pipe register. It does so by first
- *	going through all the pipe registers that are currently enabled. It then
- *	calculates how much of a shift do we need to make and for how long. It then
- *	sets a timer for the time period after which we need to reprogram the default
- *	value and finally programs the modified value.
- * Parameters
- *	double time_diff - The time difference between two systems (in ms) that we
- *	need to synchronize
- * Return val
- *	void
- ******************************************************************************/
-void pipe_program(double time_diff)
-{
-	int shift = 1;
-	int expire_ms;
-	TRACING();
-
-	for(int i = 0; i < ARRAY_SIZE(pipe_reg_table); i++) {
-		/* Skip any that aren't enabled */
-		if(!pipe_reg_table[i].enabled) {
-			continue;
-		}
-
-		pipe_reg_table[i].done = 0;
-
-		if(time_diff < 0) {
-			shift *= -1;
-		}
-		calc_reg_vals(&pipe_reg_table[i].vblank, shift);
-		calc_reg_vals(&pipe_reg_table[i].vtotal, shift);
-
-		expire_ms = calc_time_to_sync(pipe_reg_table[i].vblank.orig_val, time_diff);
-		DBG("Timer expiry in ms %d\n", expire_ms);
-
-		user_info *ui = new user_info(&pipe_reg_table[i]);
-		make_timer((long) expire_ms, ui, &pipe_reg_table[i].timer_id);
-
-		program_regs(&pipe_reg_table[i], 1);
-		print_time();
-	}
-}
-
-/*******************************************************************************
- * Description
- *	pipe_check_if_done - This function checks to see if the time period for
- *	synchronizing two systems is over and if so, it deletes the associated timer
- * Parameters
- *	NONE
- * Return val
- *	void
- ******************************************************************************/
-void pipe_check_if_done()
-{
-	TRACING();
-	for (int i = 0; i < ARRAY_SIZE(pipe_reg_table); i++) {
-		if (pipe_reg_table[i].enabled) {
-			while(!pipe_reg_table[i].done) {
-				usleep(1000);
-			}
-			timer_delete(pipe_reg_table[i].timer_id);
-		}
-	}
+	/* Wait to write back the original values */
+	phy[type].check_if_done();
+	timer_delete(phy[type].timer_id);
 }
 
 /*******************************************************************************
@@ -276,105 +204,9 @@ void synchronize_vsync(double time_diff)
 		return;
 	}
 
-	if(!pipe_find()) {
-		DBG("No pipes that are enabled found\n");
-		return;
+	for(int i = DKL; i < TOTAL_PHYS; i++) {
+		synchronize_phys(i, time_diff);
 	}
-	pipe_program(time_diff);
-	pipe_check_if_done();
-}
-
-/*******************************************************************************
- * Description
- *  calc_time_to_sync - This function calculates how many ms we need to take
- *  in order to synchronize the primary and secondary systems given the delta
- *  between primary and secondary and the shift that we need to make in terms of
- *  percentage.
- * Parameters
- *	int vblank - The vblank register's value where active bits are stored
- *	double time_diff - The time difference in between the two systems in ms.
- * Return val
- *  int - The ms it will take to sync the systems
- ******************************************************************************/
-int calc_time_to_sync(int vblank, double time_diff)
-{
-	unsigned int active = GETBITS_VAL(vblank, 12, 0) + 1;
-
-	return abs(time_diff * active);
-}
-
-/*******************************************************************************
- * Description
- *	timer_handler - The timer callback function which gets executed whenever a
- *	timer expires. We program MMIO registers of the PHY in this function becase
- *	we have waited for a certain time period to get the primary and secondary
- *	systems vsync in sync and now it is time to reprogram the default values
- *	for the secondary system's PHYs.
- * Parameters
- *	int sig - The signal that fired
- *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
-    further information about the signal
- *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
-    The structure pointed to by this field contains signal context information
-	that was saved on the user-space stack by the kernel
- * Return val
- *  void
- ******************************************************************************/
-void timer_handler(int sig, siginfo_t *si, void *uc)
-{
-	trans_reg *tr;
-	user_info *ui = (user_info *) si->si_value.sival_ptr;
-	if(!ui) {
-		return;
-	}
-	print_time();
-	DBG("timer done\n");
-	tr = (trans_reg *) ui->get_reg();
-	program_regs(tr, 0);
-	tr->done = 1;
-	delete ui;
-}
-
-/*******************************************************************************
- * Description
- *	make_timer - This function creates a timer.
- * Parameters
- *	long expire_ms - The time period in ms after which the timer will fire.
- *	void *user_ptr - A pointer to pass to the timer handler
- *	timer_t *t     - A pointer to a pointer where we need to store the timer
- * Return val
- *	int - 0 == SUCCESS, -1 = FAILURE
- ******************************************************************************/
-int make_timer(long expire_ms, void *user_ptr, timer_t *t)
-{
-	struct sigevent         te;
-	struct itimerspec       its;
-	struct sigaction        sa;
-	int                     sig_no = SIGRTMIN;
-
-
-	/* Set up signal handler. */
-	sa.sa_flags = SA_SIGINFO;
-	sa.sa_sigaction = timer_handler;
-	sigemptyset(&sa.sa_mask);
-	if (sigaction(sig_no, &sa, NULL) == -1) {
-		ERR("Failed to setup signal handling for timer.\n");
-		return -1;
-	}
-
-	/* Set and enable alarm */
-	te.sigev_notify = SIGEV_SIGNAL;
-	te.sigev_signo = sig_no;
-	te.sigev_value.sival_ptr = user_ptr;
-	timer_create(CLOCK_REALTIME, &te, t);
-
-	its.it_interval.tv_sec = 0;
-	its.it_interval.tv_nsec = TV_NSEC(expire_ms);
-	its.it_value.tv_sec = TV_SEC(expire_ms);
-	its.it_value.tv_nsec = TV_NSEC(expire_ms);
-	timer_settime(*t, 0, &its, NULL);
-
-	return 0;
 }
 
 /*******************************************************************************

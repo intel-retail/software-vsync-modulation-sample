@@ -31,20 +31,12 @@ using namespace std;
 #define TRANS_DDI_FUNC_CTL_DSI1       0x6bc00
 #define DPCLKA_CFGCR0                 0x164280
 #define DPCLKA_CFGCR1                 0x1642BC
-#define TRANS_VBLANK_A                0x60010
-#define TRANS_VTOTAL_A                0x6000c
-#define TRANS_VTOTAL_B                0x6100c
-#define TRANS_VBLANK_B                0x61010
-#define TRANS_VTOTAL_C                0x6200c
-#define TRANS_VBLANK_C                0x62010
-#define TRANS_VTOTAL_D                0x6300c
-#define TRANS_VBLANK_D                0x63010
-#define TRANS_VTOTAL_EDP              0x6f00c
-#define TRANS_VBLANK_EDP              0x6f014
 #define REG(a)                        {a, 0, 0}
 
 enum {
-	PIPE,
+	DKL,
+	COMBO,
+//	C10,
 	TOTAL_PHYS,
 };
 
@@ -56,9 +48,11 @@ typedef struct _reg {
 
 class user_info {
 	private:
+	int phy_type;
 	void *phy_reg;
 	public:
-	user_info(void *r) { phy_reg = r; }
+	user_info(int t, void *r) { phy_type = t; phy_reg = r; }
+	int get_type() { return phy_type; }
 	void *get_reg() { return phy_reg; }
 };
 
@@ -66,7 +60,6 @@ typedef struct _vbl_info {
 	long *vsync_array;
 	int size;
 	int counter;
-	int pipe;
 } vbl_info;
 
 typedef int  (*find_func)();
@@ -98,18 +91,12 @@ typedef struct _platform {
 	int ds_size;
 } platform;
 
-typedef struct _trans_reg {
-	reg vblank;
-	reg vtotal;
-	int enabled;
-	int done;
-	timer_t timer_id;
-} trans_reg;
+extern platform platform_table[];
+extern int supported_platform;
+extern list<ddi_sel *> *dpll_enabled_list;
 
-int calc_time_to_sync(int vblank, double time_diff);
+int calc_steps_to_sync(double time_diff, double shift);
 void timer_handler(int sig, siginfo_t *si, void *uc);
 int make_timer(long expire_ms, void *user_ptr, timer_t *t);
-void program_regs(trans_reg *tr, int mod);
-unsigned int pipe_to_wait_for(int pipe);
 
 #endif
