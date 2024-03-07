@@ -28,5 +28,6 @@ int find_enabled_dkl_phys();
 void program_dkl_phys(double time_diff, timer_t *t);
 void check_if_dkl_done();
 void program_dkl_mmio(dkl_phy_reg *pr, int mod);
+void reset_dkl(int sig, siginfo_t *si, void *uc);
 
 #endif

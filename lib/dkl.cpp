@@ -90,7 +90,7 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(DKL, &dkl_table[i]);
-		make_timer((long) steps, ui, t);
+		make_timer((long) steps, ui, t, reset_dkl);
 #endif
 		DBG("OLD VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
 				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
@@ -192,3 +192,40 @@ void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 #endif
 }
 
+/*******************************************************************************
+ * Description
+ *  reset_dkl - This function resets the DKL Phy MMIO registers to their
+ *  original value. It gets executed whenever a timer expires. We program MMIO
+ *	registers of the PHY in this function becase we have waited for a certain
+ *  time period to get the primary and secondary systems vsync in sync and now
+ *	it is time to reprogram the default values for the secondary system's PHYs.
+ * Parameters
+ *	int sig - The signal that fired
+ *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
+ *  further information about the signal
+ *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
+ *  The structure pointed to by this field contains signal context information
+ *  that was saved on the user-space stack by the kernel
+ * Return val
+ *  void
+ ******************************************************************************/
+void reset_dkl(int sig, siginfo_t *si, void *uc)
+{
+	user_info *ui = (user_info *) si->si_value.sival_ptr;
+	if(!ui) {
+		return;
+	}
+
+	DBG("timer done\n");
+	dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
+	program_dkl_mmio(dr, 0);
+	DBG("DEFAULT VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
+			"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
+			dr->dkl_pll_div0.orig_val,
+			dr->dkl_visa_serializer.orig_val,
+			dr->dkl_bias.orig_val,
+			dr->dkl_ssc.orig_val,
+			dr->dkl_dco.orig_val);
+	dr->done = 1;
+	delete ui;
+}

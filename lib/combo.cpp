@@ -18,12 +18,12 @@ combo_phy_reg combo_table[] = {
  * Description
  *  find_enabled_dplls - This function finds out which dplls are enabled on the
  *  current system. It does this by first finding out the values of
- * 	TRANS_DDI_FUNC_CTL register for all the pipes. Bits 30:27 have the DDI which
+ *	TRANS_DDI_FUNC_CTL register for all the pipes. Bits 30:27 have the DDI which
  *  this pipe is connected to. Once the DDI is found, we match the DDI with the
- * 	available ones on this platform. Then, we read DPCLKA_CFGCR0 or DPCLKA_CFGCR1
- * 	depending upon which DDI is enabled. Finally, the corresponding clock_bits
- * 	tell us which DPLL is turned on for this pipe. Now, we can go about reading
- * 	the corresponding DPLLs.
+ *	available ones on this platform. Then, we read DPCLKA_CFGCR0 or DPCLKA_CFGCR1
+ *	depending upon which DDI is enabled. Finally, the corresponding clock_bits
+ *	tell us which DPLL is turned on for this pipe. Now, we can go about reading
+ *	the corresponding DPLLs.
  * Parameters
  *	None
  * Return val
@@ -225,7 +225,7 @@ void program_combo_phys(double time_diff, timer_t *t)
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
-		make_timer((long) steps, ui, t);
+		make_timer((long) steps, ui, t, reset_combo);
 #endif
 		DBG("OLD VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
 				combo_table[i].cfgcr0.orig_val, combo_table[i].cfgcr1.orig_val);
@@ -324,3 +324,35 @@ void program_combo_mmio(combo_phy_reg *pr, int mod)
 #endif
 }
 
+/*******************************************************************************
+ * Description
+ *  reset_combo - This function resets the Combo Phy MMIO registers to their
+ *  original value. It gets executed whenever a timer expires. We program MMIO
+ *	registers of the PHY in this function becase we have waited for a certain
+ *  time period to get the primary and secondary systems vsync in sync and now
+ *	it is time to reprogram the default values for the secondary system's PHYs.
+ * Parameters
+ *	int sig - The signal that fired
+ *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
+ *  further information about the signal
+ *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
+ *  The structure pointed to by this field contains signal context information
+ *  that was saved on the user-space stack by the kernel
+ * Return val
+ *  void
+ ******************************************************************************/
+void reset_combo(int sig, siginfo_t *si, void *uc)
+{
+	user_info *ui = (user_info *) si->si_value.sival_ptr;
+	if(!ui) {
+		return;
+	}
+
+	DBG("timer done\n");
+	combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
+	program_combo_mmio(cr, 0);
+	DBG("DEFAULT VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
+			cr->cfgcr0.orig_val, cr->cfgcr1.orig_val);
+	cr->done = 1;
+	delete ui;
+}
