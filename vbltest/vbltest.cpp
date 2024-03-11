@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
 	int ret = 0, size;
 	long *client_vsync, avg;
 
-	if(argc != 2) {
-		ERR("Usage: %s <number of vsyncs to get timestamp for>\n", argv[0]);
+	if(argc != 3) {
+		ERR("Usage: %s <number of vsyncs to get timestamp for> <0 based pipe to get for>\n", argv[0]);
 		return 1;
 	}
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
 	client_vsync = new long[size];
 
-	if(get_vsync(client_vsync, size)) {
+	if(get_vsync(client_vsync, size, atoi(argv[2]))) {
 		delete [] client_vsync;
 		vsync_lib_uninit();
 		return 1;
