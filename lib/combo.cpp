@@ -243,8 +243,9 @@ void program_combo_phys(double time_diff, timer_t *t)
 		int pdiv = get_val_from_bit(pdiv_table, ARRAY_SIZE(pdiv_table), pdiv_bit);
 		int kdiv_bit = GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 8, 6);
 		int kdiv = get_val_from_bit(kdiv_table, ARRAY_SIZE(kdiv_table), kdiv_bit);
+		int qdiv_mode = combo_table[i].cfgcr1.orig_val & BIT(9);
 		/* TODO: In case we run into some other weird dividers, then we may need to revisit this */
-		int qdiv = (kdiv == 2) ? GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 17, 10) : 1;
+		int qdiv = (kdiv == 2 && qdiv_mode == 1) ? GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 17, 10) : 1;
 		int ro_div_bias_frac = i_fbdivfrac_14_0 << 5 | ((i_fbdiv_intgr_9_0 & GENMASK(2, 0)) << 19);
 		int ro_div_bias_int = i_fbdiv_intgr_9_0 >> 3;
 		double dco_divider = 4*((double) ro_div_bias_int + ((double) ro_div_bias_frac / pow(2,22)));
