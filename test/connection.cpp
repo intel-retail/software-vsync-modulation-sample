@@ -63,7 +63,7 @@ void connection::set_server(sockaddr_in *addr, int s_addr, int portid)
  ******************************************************************************/
 int connection::init_client(const char *server_name)
 {
-	char server_host_addr[MAX_LEN], copy[MAX_LEN], *ptr;
+	char server_host_addr[MAX_LEN] = {0}, copy[MAX_LEN] = {0}, *ptr;
 	int ret;
 	in_addr_t data;
 
@@ -76,7 +76,7 @@ int connection::init_client(const char *server_name)
 		return 1;
 	}
 
-	strcpy(copy, server_name);
+	strncpy(copy, server_name, MAX_LEN-1);
 	ptr = strtok(copy, ".");
 
 	if(atoi(ptr)) {
@@ -145,7 +145,7 @@ void connection::pr_inet(char **listptr, int length, char * buffer)
 {
 	struct in_addr *ptr;
 	while((ptr = (struct in_addr *) *listptr++) != NULL) {
-		strcpy(buffer, inet_ntoa(*ptr));
+		strncpy(buffer, inet_ntoa(*ptr), MAX_LEN-1);
 	}
 }
 
@@ -290,6 +290,9 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 ptp_connection::ptp_connection(char *ifc, char *ip)
 {
 	con_type = PTP;
+	memset(server_ip, 0, MAX_LEN);
+	memset(iface, 0, MAX_LEN);
+
 	strncpy(iface, ifc, MAX_LEN-1);
 	if(ip) {
 		strncpy(server_ip, ip, MAX_LEN-1);
@@ -313,6 +316,7 @@ int ptp_connection::find_iface_index(const char *iface)
 	int err;
 	struct ifreq ifreq;
 
+	memset(&ifreq, 0, sizeof(ifreq));
 	sd = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if(sd == -1) {
 		ERR("failed to open socket. Error: %s\n", strerror(errno));

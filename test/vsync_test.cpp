@@ -342,8 +342,8 @@ int do_secondary(
 int main(int argc, char *argv[])
 {
 	int ret = 0, us_synchronize, timestamps = MAX_TIMESTAMPS;
-	if(!(((argc == 2 || argc == 3) && !strcasecmp(argv[1], "pri")) ||
-		((argc == 3  || argc == 4 || argc == 5) && !strcasecmp(argv[1], "sec"))) ||
+	if(!(((argc == 2 || argc == 3) && !strncasecmp(argv[1], "pri", 3)) ||
+		((argc == 3  || argc == 4 || argc == 5) && !strncasecmp(argv[1], "sec", 3))) ||
 		(argc < 2 || argc > 5)) {
 		ERR("Invalid parameters\n");
 		usage();
@@ -355,9 +355,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if(!strcasecmp(argv[1], "pri")) {
+	if(!strncasecmp(argv[1], "pri", 3)) {
 		ret = do_primary(argc == 3 ? argv[2] : NULL);
-	} else if(!strcasecmp(argv[1], "sec")) {
+	} else if(!strncasecmp(argv[1], "sec", 3)) {
 
 		signal(SIGINT, client_close_signal);
 		signal(SIGTERM, client_close_signal);

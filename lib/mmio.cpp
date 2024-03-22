@@ -210,9 +210,9 @@ int map_cmn(int base_index, int size)
 				memcpy(&g_device, g_raw_device, read_size);
 				found = 1;
 			}
-			fclose(fp);
-
 		} /* end if(lstat...) */
+
+		fclose(fp);
 
 		if(!found) {
 			ret_val = 0;
@@ -257,5 +257,6 @@ int map_cmn(int base_index, int size)
 void close_mmio_handle()
 {
 	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
+	close(g_fd);
 }
 
