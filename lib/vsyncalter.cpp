@@ -21,7 +21,7 @@
 
 
 phy_funcs phy[] = {
-	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done, 0},
+	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done,   0},
 	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done, 0},
 };
 
@@ -234,7 +234,8 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 		info->vsync_array[info->counter++] = TIME_IN_USEC(sec, usec);
 	}
 
-	vbl.request.type = (drmVBlankSeqType) (DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT);
+	vbl.request.type = (drmVBlankSeqType) (DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT |
+		pipe_to_wait_for(info->pipe));
 	vbl.request.sequence = 1;
 	vbl.request.signal = (unsigned long)data;
 
@@ -243,7 +244,7 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 
 /*******************************************************************************
  * Description
- *  pipe_to_wait_for - This function determines the type of vblank synchronization to
+ *  get_vsync - This function determines the type of vblank synchronization to
  *	use for the output.
  *Parameters
  * int pipe - Indicates which CRTC to get vblank for.  Knowing this, we
