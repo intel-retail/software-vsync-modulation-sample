@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 #ifndef _COMBO_H
 #define _COMBO_H
 
@@ -55,5 +58,6 @@ int find_enabled_combo_phys();
 void program_combo_phys(double time_diff, timer_t *t);
 void check_if_combo_done();
 void program_combo_mmio(combo_phy_reg *pr, int mod);
+void reset_combo(int sig, siginfo_t *si, void *uc);
 
 #endif

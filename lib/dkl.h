@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 #ifndef _DKL_H
 #define _DKL_H
 
@@ -11,6 +14,11 @@
 #define DKL_BIAS(phy_num)             (PHY_NUM_BASE(phy_num) + 0x214)
 #define DKL_VISA_SERIALIZER(phy_num)  (PHY_NUM_BASE(phy_num) + 0x220)
 #define DKL_DCO(phy_num)              (PHY_NUM_BASE(phy_num) + 0x224)
+#define _HIP_INDEX_REG0               0x1010A0
+#define _HIP_INDEX_REG1               0x1010A4
+#define HIP_INDEX_REG(tc_port)        ((tc_port) < 4 ? _HIP_INDEX_REG0 : _HIP_INDEX_REG1)
+#define _HIP_INDEX_SHIFT(tc_port)     (8 * ((tc_port) % 4))
+#define HIP_INDEX_VAL(tc_port, val)   ((val) << _HIP_INDEX_SHIFT(tc_port))
 
 typedef struct _dkl_phy_reg {
 	reg dkl_pll_div0;
@@ -18,6 +26,8 @@ typedef struct _dkl_phy_reg {
 	reg dkl_bias;
 	reg dkl_ssc;
 	reg dkl_dco;
+	reg dkl_index;
+	int dkl_index_val;
 	int enabled;
 	int done;
 } dkl_phy_reg;
@@ -28,5 +38,6 @@ int find_enabled_dkl_phys();
 void program_dkl_phys(double time_diff, timer_t *t);
 void check_if_dkl_done();
 void program_dkl_mmio(dkl_phy_reg *pr, int mod);
+void reset_dkl(int sig, siginfo_t *si, void *uc);
 
 #endif

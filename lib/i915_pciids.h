@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 #ifndef _I915_PCI_IDS_H
 #define _I915_PCI_IDS_H
 

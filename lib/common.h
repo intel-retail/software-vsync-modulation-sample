@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 #ifndef _COMMON_H
 #define _COMMON_H
 
@@ -60,11 +63,13 @@ typedef struct _vbl_info {
 	long *vsync_array;
 	int size;
 	int counter;
+	int pipe;
 } vbl_info;
 
 typedef int  (*find_func)();
 typedef void (*program_func)(double time_diff, timer_t *t);
 typedef void (*check_func)();
+typedef void (*reset_func)(int sig, siginfo_t *si, void *uc);
 
 typedef struct _phy_funcs {
 	char name[20];
@@ -97,6 +102,7 @@ extern list<ddi_sel *> *dpll_enabled_list;
 
 int calc_steps_to_sync(double time_diff, double shift);
 void timer_handler(int sig, siginfo_t *si, void *uc);
-int make_timer(long expire_ms, void *user_ptr, timer_t *t);
+int make_timer(long expire_ms, void *user_ptr, timer_t *t, reset_func reset);
+unsigned int pipe_to_wait_for(int pipe);
 
 #endif

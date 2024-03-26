@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 #include <math.h>
 #include <debug.h>
 #include <signal.h>
@@ -6,12 +9,18 @@
 #include "dkl.h"
 
 dkl_phy_reg dkl_table[] = {
-	{REG(DKL_PLL_DIV0(0)), REG(DKL_VISA_SERIALIZER(0)), REG(DKL_BIAS(0)), REG(DKL_SSC(0)), REG(DKL_DCO(0)), 0, 1},
-	{REG(DKL_PLL_DIV0(1)), REG(DKL_VISA_SERIALIZER(1)), REG(DKL_BIAS(1)), REG(DKL_SSC(1)), REG(DKL_DCO(1)), 0, 1},
-	{REG(DKL_PLL_DIV0(2)), REG(DKL_VISA_SERIALIZER(2)), REG(DKL_BIAS(2)), REG(DKL_SSC(2)), REG(DKL_DCO(2)), 0, 1},
-	{REG(DKL_PLL_DIV0(3)), REG(DKL_VISA_SERIALIZER(3)), REG(DKL_BIAS(3)), REG(DKL_SSC(3)), REG(DKL_DCO(3)), 0, 1},
-	{REG(DKL_PLL_DIV0(4)), REG(DKL_VISA_SERIALIZER(4)), REG(DKL_BIAS(4)), REG(DKL_SSC(4)), REG(DKL_DCO(4)), 0, 1},
-	{REG(DKL_PLL_DIV0(5)), REG(DKL_VISA_SERIALIZER(5)), REG(DKL_BIAS(5)), REG(DKL_SSC(5)), REG(DKL_DCO(5)), 0, 1},
+	{REG(DKL_PLL_DIV0(0)), REG(DKL_VISA_SERIALIZER(0)), REG(DKL_BIAS(0)), REG(DKL_SSC(0)), REG(DKL_DCO(0)), REG(HIP_INDEX_REG(0)),
+		HIP_INDEX_VAL(0, 2), 0, 1},
+	{REG(DKL_PLL_DIV0(1)), REG(DKL_VISA_SERIALIZER(1)), REG(DKL_BIAS(1)), REG(DKL_SSC(1)), REG(DKL_DCO(1)), REG(HIP_INDEX_REG(1)),
+		HIP_INDEX_VAL(1, 2), 0, 1},
+	{REG(DKL_PLL_DIV0(2)), REG(DKL_VISA_SERIALIZER(2)), REG(DKL_BIAS(2)), REG(DKL_SSC(2)), REG(DKL_DCO(2)), REG(HIP_INDEX_REG(2)),
+		HIP_INDEX_VAL(2, 2), 0, 1},
+	{REG(DKL_PLL_DIV0(3)), REG(DKL_VISA_SERIALIZER(3)), REG(DKL_BIAS(3)), REG(DKL_SSC(3)), REG(DKL_DCO(3)), REG(HIP_INDEX_REG(3)),
+		HIP_INDEX_VAL(3, 2), 0, 1},
+	{REG(DKL_PLL_DIV0(4)), REG(DKL_VISA_SERIALIZER(4)), REG(DKL_BIAS(4)), REG(DKL_SSC(4)), REG(DKL_DCO(4)), REG(HIP_INDEX_REG(4)),
+		HIP_INDEX_VAL(4, 2), 0, 1},
+	{REG(DKL_PLL_DIV0(5)), REG(DKL_VISA_SERIALIZER(5)), REG(DKL_BIAS(5)), REG(DKL_SSC(5)), REG(DKL_DCO(5)), REG(HIP_INDEX_REG(5)),
+		HIP_INDEX_VAL(5, 2), 0, 1},
 };
 
 /*******************************************************************************
@@ -34,7 +43,7 @@ int find_enabled_dkl_phys()
 	unsigned int val;
 	for(int i = 0; i < ARRAY_SIZE(dkl_table); i++) {
 		val = READ_OFFSET_DWORD(dkl_table[i].dkl_pll_div0.addr);
-		if(val != 0 && val != 0xFFFFFFFF) {
+		if(val != 0xFFFFFFFF) {
 			dkl_table[i].enabled = 1;
 			enabled++;
 			DBG("DKL phy #%d is on\n", i);
@@ -74,6 +83,22 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		dkl_table[i].dkl_dco.orig_val = 0xe4004080;
 #else
 		dkl_table[i].dkl_pll_div0.orig_val         = dkl_table[i].dkl_pll_div0.mod_val        = READ_OFFSET_DWORD(dkl_table[i].dkl_pll_div0.addr);
+
+		/*
+		 * Each Dekel PHY is addressed through a 4KB aperture. Each PHY has more than
+		 * 4KB of register space, so a separate index is programmed in HIP_INDEX_REG0
+		 * or HIP_INDEX_REG1, based on the port number, to set the upper 2 address
+		 * bits that point the 4KB window into the full PHY register space.
+		 * So, basically, if we read the value of the PLL DIV0 register and it is 0,
+		 * then that means that this aperture may need to be shifted. Once we do that,
+		 * we should re-read the value of the DIV0 register once more and this time it
+		 * should be valid.
+		*/
+		if(!dkl_table[i].dkl_pll_div0.orig_val) {
+			WRITE_OFFSET_DWORD(dkl_table[i].dkl_index.addr, dkl_table[i].dkl_index_val);
+			dkl_table[i].dkl_pll_div0.orig_val         = dkl_table[i].dkl_pll_div0.mod_val        = READ_OFFSET_DWORD(dkl_table[i].dkl_pll_div0.addr);
+		}
+
 		dkl_table[i].dkl_visa_serializer.orig_val  = dkl_table[i].dkl_visa_serializer.mod_val = READ_OFFSET_DWORD(dkl_table[i].dkl_visa_serializer.addr);
 		dkl_table[i].dkl_bias.orig_val             = dkl_table[i].dkl_bias.mod_val            = READ_OFFSET_DWORD(dkl_table[i].dkl_bias.addr);
 		dkl_table[i].dkl_ssc.orig_val              = dkl_table[i].dkl_ssc.mod_val             = READ_OFFSET_DWORD(dkl_table[i].dkl_ssc.addr);
@@ -90,7 +115,7 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(DKL, &dkl_table[i]);
-		make_timer((long) steps, ui, t);
+		make_timer((long) steps, ui, t, reset_dkl);
 #endif
 		DBG("OLD VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
 				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
@@ -179,6 +204,20 @@ void check_if_dkl_done()
 void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 {
 #if !TESTING
+	/*
+	 * Each Dekel PHY is addressed through a 4KB aperture. Each PHY has more than
+	 * 4KB of register space, so a separate index is programmed in HIP_INDEX_REG0
+	 * or HIP_INDEX_REG1, based on the port number, to set the upper 2 address
+	 * bits that point the 4KB window into the full PHY register space.
+	 * So, basically, if we read the value of the PLL DIV0 register and it is 0,
+	 * then that means that this aperture may need to be shifted. Once we do that,
+	 * we should re-read the value of the DIV0 register once more and this time it
+	 * should be valid.
+	 */
+	if(!READ_OFFSET_DWORD(pr->dkl_pll_div0.addr)) {
+		WRITE_OFFSET_DWORD(pr->dkl_index.addr, pr->dkl_index_val);
+	}
+
 	WRITE_OFFSET_DWORD(pr->dkl_pll_div0.addr,
 			mod ? pr->dkl_pll_div0.mod_val : pr->dkl_pll_div0.orig_val);
 	WRITE_OFFSET_DWORD(pr->dkl_visa_serializer.addr,
@@ -192,3 +231,40 @@ void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 #endif
 }
 
+/*******************************************************************************
+ * Description
+ *  reset_dkl - This function resets the DKL Phy MMIO registers to their
+ *  original value. It gets executed whenever a timer expires. We program MMIO
+ *	registers of the PHY in this function becase we have waited for a certain
+ *  time period to get the primary and secondary systems vsync in sync and now
+ *	it is time to reprogram the default values for the secondary system's PHYs.
+ * Parameters
+ *	int sig - The signal that fired
+ *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
+ *  further information about the signal
+ *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
+ *  The structure pointed to by this field contains signal context information
+ *  that was saved on the user-space stack by the kernel
+ * Return val
+ *  void
+ ******************************************************************************/
+void reset_dkl(int sig, siginfo_t *si, void *uc)
+{
+	user_info *ui = (user_info *) si->si_value.sival_ptr;
+	if(!ui) {
+		return;
+	}
+
+	DBG("timer done\n");
+	dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
+	program_dkl_mmio(dr, 0);
+	DBG("DEFAULT VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
+			"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
+			dr->dkl_pll_div0.orig_val,
+			dr->dkl_visa_serializer.orig_val,
+			dr->dkl_bias.orig_val,
+			dr->dkl_ssc.orig_val,
+			dr->dkl_dco.orig_val);
+	dr->done = 1;
+	delete ui;
+}
