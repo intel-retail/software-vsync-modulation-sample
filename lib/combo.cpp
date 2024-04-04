@@ -7,6 +7,7 @@
 #include "mmio.h"
 #include "combo.h"
 
+list<ddi_sel *> *dpll_enabled_list = NULL;
 
 combo_phy_reg combo_table[] = {
 	{REG(DPLL0_CFGCR0), REG(DPLL0_CFGCR1), 0, 1},
@@ -305,6 +306,7 @@ void wait_until_combo_done(timer_t t)
 		}
 	}
 	timer_delete(t);
+	cleanup_list();
 }
 
 /*******************************************************************************
@@ -358,4 +360,25 @@ void reset_combo(int sig, siginfo_t *si, void *uc)
 			cr->cfgcr0.orig_val, cr->cfgcr1.orig_val);
 	cr->done = 1;
 	delete ui;
+}
+
+
+/*******************************************************************************
+ * Description
+ *  cleanup_list - This function deallocates all members of the dpll_enabled_list
+ * Parameters
+ *	NONE
+ * Return val
+ *  void
+ ******************************************************************************/
+void cleanup_list()
+{
+	if(dpll_enabled_list) {
+		for(list<ddi_sel *>::iterator it = dpll_enabled_list->begin();
+		it != dpll_enabled_list->end(); it++) {
+			delete *it;
+		}
+		delete dpll_enabled_list;
+		dpll_enabled_list = NULL;
+	}
 }

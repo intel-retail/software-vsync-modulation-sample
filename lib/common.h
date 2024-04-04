@@ -95,7 +95,6 @@ typedef struct _platform {
 
 extern platform platform_table[];
 extern int supported_platform;
-extern list<ddi_sel *> *dpll_enabled_list;
 
 int calc_steps_to_sync(double time_diff, double shift);
 void timer_handler(int sig, siginfo_t *si, void *uc);
