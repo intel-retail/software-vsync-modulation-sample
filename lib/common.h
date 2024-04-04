@@ -65,7 +65,7 @@ typedef struct _vbl_info {
 
 typedef int  (*find_func)();
 typedef void (*program_func)(double time_diff, timer_t *t);
-typedef void (*check_func)();
+typedef void (*wait_func)(timer_t t);
 typedef void (*reset_func)(int sig, siginfo_t *si, void *uc);
 
 typedef struct _phy_funcs {
@@ -73,7 +73,7 @@ typedef struct _phy_funcs {
 	void *table;
 	find_func find;
 	program_func program;
-	check_func check_if_done;
+	wait_func wait_until_done;
 	timer_t timer_id;
 } phy_funcs;
 

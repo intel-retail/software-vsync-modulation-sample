@@ -53,7 +53,7 @@ extern combo_phy_reg combo_table[];
 
 int find_enabled_combo_phys();
 void program_combo_phys(double time_diff, timer_t *t);
-void check_if_combo_done();
+void wait_until_combo_done(timer_t t);
 void program_combo_mmio(combo_phy_reg *pr, int mod);
 void reset_combo(int sig, siginfo_t *si, void *uc);
 

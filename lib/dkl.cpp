@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 #include "mmio.h"
 #include "dkl.h"
 
@@ -168,15 +169,15 @@ void program_dkl_phys(double time_diff, timer_t *t)
 
 /*******************************************************************************
  * Description
- *	check_if_dkl_done - This function checks to see if the DKL programming is
+ *	wait_until_dkl_done - This function waits until the DKL programming is
  *	finished. There is a timer for which time the new values will remain in
  *	effect. After that timer expires, the original values will be restored.
  * Parameters
- *	NONE
+ *	timer_t t - The timer which needs to be deleted
  * Return val
  *	void
  ******************************************************************************/
-void check_if_dkl_done()
+void wait_until_dkl_done(timer_t t)
 {
 	TRACING();
 	for(int i = 0; i < ARRAY_SIZE(dkl_table); i++) {
@@ -184,6 +185,7 @@ void check_if_dkl_done()
 			usleep(1000);
 		}
 	}
+	timer_delete(t);
 }
 
 /*******************************************************************************

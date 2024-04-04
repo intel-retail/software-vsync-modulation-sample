@@ -18,8 +18,8 @@
 
 
 phy_funcs phy[] = {
-	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done,   0},
-	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done, 0},
+	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   wait_until_dkl_done,   0},
+	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, wait_until_combo_done, 0},
 };
 
 ddi_sel adl_s_ddi_sel[] = {
@@ -178,8 +178,7 @@ void synchronize_phys(int type, double time_diff)
 	phy[type].program(time_diff, &phy[type].timer_id);
 
 	/* Wait to write back the original values */
-	phy[type].check_if_done();
-	timer_delete(phy[type].timer_id);
+	phy[type].wait_until_done(phy[type].timer_id);
 }
 
 /*******************************************************************************
