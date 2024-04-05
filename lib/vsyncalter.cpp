@@ -18,8 +18,8 @@
 
 
 phy_funcs phy[] = {
-	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   check_if_dkl_done,   0},
-	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, check_if_combo_done, 0},
+	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   wait_until_dkl_done,   0},
+	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, wait_until_combo_done, 0},
 };
 
 ddi_sel adl_s_ddi_sel[] = {
@@ -46,7 +46,6 @@ platform platform_table[] = {
 
 int g_dev_fd = 0;
 int supported_platform = 0;
-list<ddi_sel *> *dpll_enabled_list = NULL;
 
 /*******************************************************************************
  * Description
@@ -121,24 +120,6 @@ int vsync_lib_init()
 
 /*******************************************************************************
  * Description
- *  cleanup_list - This function deallocates all members of the dpll_enabled_list
- * Parameters
- *	NONE
- * Return val
- *  void
- ******************************************************************************/
-void cleanup_list()
-{
-	if(dpll_enabled_list) {
-		for(list<ddi_sel *>::iterator it = dpll_enabled_list->begin(); it != dpll_enabled_list->end(); it++) {
-			delete *it;
-		}
-		delete dpll_enabled_list;
-	}
-}
-
-/*******************************************************************************
- * Description
  *  vsync_lib_uninit - This function uninitializes the library by closing devices
  *  and unmapping memory. It must be called at program exit or else we can have
  *  memory leaks in the program.
@@ -149,7 +130,6 @@ void cleanup_list()
  ******************************************************************************/
 void vsync_lib_uninit()
 {
-	cleanup_list();
 	close_mmio_handle();
 	UNINIT();
 }
@@ -169,17 +149,17 @@ void vsync_lib_uninit()
  ******************************************************************************/
 void synchronize_phys(int type, double time_diff)
 {
+	/* First, find all the enabled phys */
 	if(!phy[type].find()) {
 		DBG("No %s PHYs found\n", phy[type].name);
 		return;
 	}
 
-	/* Cycle through all the phys */
+	/* Program the phys that were found with new values */
 	phy[type].program(time_diff, &phy[type].timer_id);
 
-	/* Wait to write back the original values */
-	phy[type].check_if_done();
-	timer_delete(phy[type].timer_id);
+	/* Finally, wait to write back the original values */
+	phy[type].wait_until_done(phy[type].timer_id);
 }
 
 /*******************************************************************************
