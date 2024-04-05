@@ -115,12 +115,17 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		user_info *ui = new user_info(DKL, &dkl_table[i]);
 		make_timer((long) steps, ui, t, reset_dkl);
 #endif
-		DBG("OLD VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
-				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
+		DBG("OLD VALUES\n dkl_pll_div0 [0x%X] =\t 0x%X\n dkl_visa_serializer [0x%X] =\t 0x%X\n "
+				"dkl_bias [0x%X] =\t 0x%X\n dkl_ssc [0x%X] =\t 0x%X\n dkl_dco [0x%X] =\t 0x%X\n",
+				dkl_table[i].dkl_pll_div0.addr,
 				dkl_table[i].dkl_pll_div0.orig_val,
+				dkl_table[i].dkl_visa_serializer.addr,
 				dkl_table[i].dkl_visa_serializer.orig_val,
+				dkl_table[i].dkl_bias.addr,
 				dkl_table[i].dkl_bias.orig_val,
+				dkl_table[i].dkl_ssc.addr,
 				dkl_table[i].dkl_ssc.orig_val,
+				dkl_table[i].dkl_dco.addr,
 				dkl_table[i].dkl_dco.orig_val);
 
 		/*
@@ -156,12 +161,17 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		dkl_table[i].dkl_dco.mod_val &= ~BIT(2);
 		dkl_table[i].dkl_dco.mod_val |= 0x2 << 1;
 
-		DBG("NEW VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
-				"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
+		DBG("NEW VALUES\n dkl_pll_div0 [0x%X] =\t 0x%X\n dkl_visa_serializer [0x%X] =\t 0x%X\n "
+				"dkl_bias [0x%X] =\t 0x%X\n dkl_ssc [0x%X] =\t 0x%X\n dkl_dco [0x%X] =\t 0x%X\n",
+				dkl_table[i].dkl_pll_div0.addr,
 				dkl_table[i].dkl_pll_div0.mod_val,
+				dkl_table[i].dkl_visa_serializer.addr,
 				dkl_table[i].dkl_visa_serializer.mod_val,
+				dkl_table[i].dkl_bias.addr,
 				dkl_table[i].dkl_bias.mod_val,
+				dkl_table[i].dkl_ssc.addr,
 				dkl_table[i].dkl_ssc.mod_val,
+				dkl_table[i].dkl_dco.addr,
 				dkl_table[i].dkl_dco.mod_val);
 		program_dkl_mmio(&dkl_table[i], 1);
 	}
@@ -257,12 +267,17 @@ void reset_dkl(int sig, siginfo_t *si, void *uc)
 	DBG("timer done\n");
 	dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
 	program_dkl_mmio(dr, 0);
-	DBG("DEFAULT VALUES\n dkl_pll_div0 \t 0x%X\n dkl_visa_serializer \t 0x%X\n "
-			"dkl_bias \t 0x%X\n dkl_ssc \t 0x%X\n dkl_dco \t 0x%X\n",
+	DBG("DEFAULT VALUES\n dkl_pll_div0 [0x%X] =\t 0x%X\n dkl_visa_serializer [0x%X] =\t 0x%X\n "
+			"dkl_bias [0x%X] =\t 0x%X\n dkl_ssc [0x%X] =\t 0x%X\n dkl_dco [0x%X] =\t 0x%X\n",
+			dr->dkl_pll_div0.addr,
 			dr->dkl_pll_div0.orig_val,
+			dr->dkl_visa_serializer.addr,
 			dr->dkl_visa_serializer.orig_val,
+			dr->dkl_bias.addr,
 			dr->dkl_bias.orig_val,
+			dr->dkl_ssc.addr,
 			dr->dkl_ssc.orig_val,
+			dr->dkl_dco.addr,
 			dr->dkl_dco.orig_val);
 	dr->done = 1;
 	delete ui;

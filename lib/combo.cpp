@@ -229,8 +229,9 @@ void program_combo_phys(double time_diff, timer_t *t)
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
 		make_timer((long) steps, ui, t, reset_combo);
 #endif
-		DBG("OLD VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
-				combo_table[i].cfgcr0.orig_val, combo_table[i].cfgcr1.orig_val);
+		DBG("OLD VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
+				combo_table[i].cfgcr0.addr, combo_table[i].cfgcr0.orig_val, 
+				combo_table[i].cfgcr1.addr, combo_table[i].cfgcr1.orig_val);
 
 		/*
 		 * Symbol clock frequency in MHz (base) = DCO Divider * Reference frequency in MHz /  (5 * Pdiv * Qdiv * Kdiv)
@@ -281,7 +282,8 @@ void program_combo_phys(double time_diff, timer_t *t)
 		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		combo_table[i].cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
 
-		DBG("NEW VALUES\n cfgcr0 \t 0x%X\n", combo_table[i].cfgcr0.mod_val);
+		DBG("NEW VALUES\n cfgcr0 [0x%X] =\t 0x%X\n", combo_table[i].cfgcr0.addr,
+		combo_table[i].cfgcr0.mod_val);
 		program_combo_mmio(&combo_table[i], 1);
 	}
 }
@@ -356,8 +358,8 @@ void reset_combo(int sig, siginfo_t *si, void *uc)
 	DBG("timer done\n");
 	combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
 	program_combo_mmio(cr, 0);
-	DBG("DEFAULT VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
-			cr->cfgcr0.orig_val, cr->cfgcr1.orig_val);
+	DBG("DEFAULT VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
+			cr->cfgcr0.addr, cr->cfgcr0.orig_val, cr->cfgcr1.addr, cr->cfgcr1.orig_val);
 	cr->done = 1;
 	delete ui;
 }
