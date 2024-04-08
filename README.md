@@ -41,6 +41,15 @@ apt install -y intel-gpu-tools edid-decode
 ```
 
 # Preparing two systems for PTP communication:
+This program allows two systems to synchronize their vertical sync firing times.
+
+Building steps:
+1) Type ```make release``` from the main directory. It compiles everything and creates a 
+   release folder which can then be copied to the target systems.
+
+Building of this program has been successfully tested on both Ubuntu 20 and Fedora 30.
+
+Preparing two systems for PTP communication:
 In order to prepare two systems, please follow these steps:
 1) There should be a network cable directly connecting the ethernet ports of the two
 systems.
