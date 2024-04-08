@@ -4,13 +4,13 @@
 #include <pciaccess.h>
 
 typedef struct _gfx_pci_device {
-    unsigned short vendor_id, device_id;    /* Identity of the device */
-    unsigned short device_class;            /* PCI device class */
-    unsigned long long irq;     /* IRQ number */
-    pciaddr_t base_addr[6];     /* Base addresses */
-    pciaddr_t size[6];          /* Region sizes */
-    pciaddr_t rom_base_addr;    /* Expansion ROM base address */
-    pciaddr_t rom_size;         /* Expansion ROM size */
+    unsigned short vendor_id, device_id;    // Identity of the device
+    unsigned short device_class;            // PCI device class
+    unsigned long long irq;     // IRQ number
+    pciaddr_t base_addr[6];     // Base addresses
+    pciaddr_t size[6];          // Region sizes
+    pciaddr_t rom_base_addr;    // Expansion ROM base address
+    pciaddr_t rom_size;         // Expansion ROM size
 
 } gfx_pci_device;
 

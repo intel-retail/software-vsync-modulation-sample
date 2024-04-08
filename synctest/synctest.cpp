@@ -7,15 +7,15 @@
 
 using namespace std;
 
-/*******************************************************************************
- * Description
- *	main - This is the main function
- * Parameters
- *	int argc - The number of command line arguments
- *	char *argv[] - Each command line argument in an array
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This is the main function
+* @param argc - The number of command line arguments
+* @param *argv[] - Each command line argument in an array
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int main(int argc, char *argv[])
 {
 	int ret = 0;

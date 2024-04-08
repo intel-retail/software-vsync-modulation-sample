@@ -21,16 +21,14 @@ dkl_phy_reg dkl_table[] = {
 		HIP_INDEX_VAL(5, 2), 0, 1},
 };
 
-/*******************************************************************************
- * Description
- *	find_enabled_dkl_phys - This function finds out which of the DKL phys are on
- *	It does this by querying the DKL_PLL_DIV0 register for all possible
- *	combinations
- * Parameters
- *	NONE
- * Return val
- *	int - The number of DKL phys that are enabled
- ******************************************************************************/
+/**
+* @brief
+* This function finds out which of the DKL phys are on
+* It does this by querying the DKL_PLL_DIV0 register for all possible
+* combinations
+* @param None
+* @return The number of DKL phys that are enabled
+*/
 int find_enabled_dkl_phys()
 {
 	int enabled = 0;
@@ -53,23 +51,21 @@ int find_enabled_dkl_phys()
 	return enabled;
 }
 
-/*******************************************************************************
- * Description
- *	program_dkl_phys - This function programs DKL phys on the system
- * Parameters
- *	double time_diff - This is the time difference in between the primary and the
- *	secondary systems in ms. If master is ahead of the slave , then the time
- *	difference is a positive number otherwise negative.
- *	timer_t *t     - A pointer to a pointer where we need to store the timer
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* This function programs DKL phys on the system
+* @param time_diff - This is the time difference in between the primary and the
+* secondary systems in ms. If master is ahead of the slave , then the time
+* difference is a positive number otherwise negative.
+* @param *t - A pointer to a pointer where we need to store the timer
+* @return void
+*/
 void program_dkl_phys(double time_diff, timer_t *t)
 {
 	double shift = SHIFT;
 
 	for(int i = 0; i < ARRAY_SIZE(dkl_table); i++) {
-		/* Skip any that aren't enabled */
+		// Skip any that aren't enabled
 		if(!dkl_table[i].enabled) {
 			continue;
 		}
@@ -101,10 +97,8 @@ void program_dkl_phys(double time_diff, timer_t *t)
 		dkl_table[i].dkl_bias.orig_val             = dkl_table[i].dkl_bias.mod_val            = READ_OFFSET_DWORD(dkl_table[i].dkl_bias.addr);
 		dkl_table[i].dkl_ssc.orig_val              = dkl_table[i].dkl_ssc.mod_val             = READ_OFFSET_DWORD(dkl_table[i].dkl_ssc.addr);
 		dkl_table[i].dkl_dco.orig_val              = dkl_table[i].dkl_dco.mod_val             = READ_OFFSET_DWORD(dkl_table[i].dkl_dco.addr);
-		/*
-		 * For whichever PHY we find, let's set the done flag to 0 so that we can later
-		 * have a timer for it to reset the default values back in their registers
-		 */
+		// For whichever PHY we find, let's set the done flag to 0 so that we can later
+		// have a timer for it to reset the default values back in their registers
 		dkl_table[i].done = 0;
 
 		if(time_diff < 0) {
@@ -128,10 +122,8 @@ void program_dkl_phys(double time_diff, timer_t *t)
 				dkl_table[i].dkl_dco.addr,
 				dkl_table[i].dkl_dco.orig_val);
 
-		/*
-		 * PLL frequency in MHz (base) = 38.4 * DKL_PLL_DIV0[i_fbprediv_3_0] *
-		 *		( DKL_PLL_DIV0[i_fbdiv_intgr_7_0]  + DKL_BIAS[i_fbdivfrac_21_0] / 2^22 )
-		 */
+		// PLL frequency in MHz (base) = 38.4* DKL_PLL_DIV0[i_fbprediv_3_0] *
+		//		( DKL_PLL_DIV0[i_fbdiv_intgr_7_0]  + DKL_BIAS[i_fbdivfrac_21_0] / 2^22 )
 		int i_fbprediv_3_0    = GETBITS_VAL(dkl_table[i].dkl_pll_div0.orig_val, 11, 8);
 		int i_fbdiv_intgr_7_0 = GETBITS_VAL(dkl_table[i].dkl_pll_div0.orig_val, 7, 0);
 		int i_fbdivfrac_21_0  = GETBITS_VAL(dkl_table[i].dkl_bias.orig_val, 29, 8);
@@ -177,16 +169,14 @@ void program_dkl_phys(double time_diff, timer_t *t)
 	}
 }
 
-/*******************************************************************************
- * Description
- *	wait_until_dkl_done - This function waits until the DKL programming is
- *	finished. There is a timer for which time the new values will remain in
- *	effect. After that timer expires, the original values will be restored.
- * Parameters
- *	timer_t t - The timer which needs to be deleted
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* This function waits until the DKL programming is
+* finished. There is a timer for which time the new values will remain in
+* effect. After that timer expires, the original values will be restored.
+* @param t - The timer which needs to be deleted
+* @return void
+*/
 void wait_until_dkl_done(timer_t t)
 {
 	TRACING();
@@ -198,18 +188,18 @@ void wait_until_dkl_done(timer_t t)
 	timer_delete(t);
 }
 
-/*******************************************************************************
- * Description
- *  program_dkl_mmio - This function programs the DKL Phy MMIO registers needed
- *  to move a vsync period for a system.
- * Parameters
- *	dkl_phy_reg *pr - The data structure that holds all of the PHY registers that
- *	need to be programmed
- *	int mod - This parameter tells the function whether to program the original
- *	values or the modified ones. 0 = Original, 1 = modified
- * Return val
- *  void
- ******************************************************************************/
+/**
+* @brief
+* This function programs the DKL Phy MMIO registers needed
+* to move a vsync period for a system.
+* @param *pr - The data structure that holds all of the PHY registers that
+* need to be programmed
+* @param mod - This parameter tells the function whether to program the original
+* values or the modified ones.
+* - 0 = Original
+* - 1 = modified
+* @return void
+*/
 void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 {
 #if !TESTING
@@ -240,23 +230,21 @@ void program_dkl_mmio(dkl_phy_reg *pr, int mod)
 #endif
 }
 
-/*******************************************************************************
- * Description
- *  reset_dkl - This function resets the DKL Phy MMIO registers to their
- *  original value. It gets executed whenever a timer expires. We program MMIO
- *	registers of the PHY in this function becase we have waited for a certain
- *  time period to get the primary and secondary systems vsync in sync and now
- *	it is time to reprogram the default values for the secondary system's PHYs.
- * Parameters
- *	int sig - The signal that fired
- *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
- *  further information about the signal
- *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
- *  The structure pointed to by this field contains signal context information
- *  that was saved on the user-space stack by the kernel
- * Return val
- *  void
- ******************************************************************************/
+/*
+* @brief
+* This function resets the DKL Phy MMIO registers to their
+* original value. It gets executed whenever a timer expires. We program MMIO
+* registers of the PHY in this function becase we have waited for a certain
+* time period to get the primary and secondary systems vsync in sync and now
+* it is time to reprogram the default values for the secondary system's PHYs.
+* @param sig - The signal that fired
+* @param *si - A pointer to a siginfo_t, which is a structure containing
+* further information about the signal
+* @param *uc - This is a pointer to a ucontext_t structure, cast to void *.
+* The structure pointed to by this field contains signal context information
+* that was saved on the user-space stack by the kernel
+* @return void
+*/
 void reset_dkl(int sig, siginfo_t *si, void *uc)
 {
 	user_info *ui = (user_info *) si->si_value.sival_ptr;
