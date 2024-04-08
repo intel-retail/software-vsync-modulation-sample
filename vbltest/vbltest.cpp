@@ -7,16 +7,14 @@
 
 using namespace std;
 
-/*******************************************************************************
- * Description
- *	find_avg - This function finds the average of all the vertical syncs that
- *	have been provided by the primary system to the secondary.
- * Parameters
- *	long *va - The array holding all the vertical syncs of the primary system
- *	int sz - The size of this array
- * Return val
- *	long - The average of the vertical syncs
- ******************************************************************************/
+/**
+* @brief
+* This function finds the average of all the vertical syncs that
+* have been provided by the primary system to the secondary.
+* @param *va - The array holding all the vertical syncs of the primary system
+* @param sz - The size of this array
+* @return The average of the vertical syncs
+*/
 long find_avg(long *va, int sz)
 {
 	int avg = 0;
@@ -26,18 +24,16 @@ long find_avg(long *va, int sz)
 	return avg / ((sz == 1) ? sz : (sz - 1));
 }
 
-/*******************************************************************************
- * Description
- *	print_vsyncs - This function prints out the last N vsyncs that the system has
- *	received either on its own or from another system. It will only print in DBG
- *	mnode
- * Parameters
- *	char *msg - Any prefix message to be printed.
- *	long *va - The array of vsyncs
- *	int sz - The size of this array
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* This function prints out the last N vsyncs that the system has
+* received either on its own or from another system. It will only print in DBG
+* mnode
+* @param *msg - Any prefix message to be printed.
+* @param *va - The array of vsyncs
+* @param sz - The size of this array
+* @return void
+*/
 void print_vsyncs(char *msg, long *va, int sz)
 {
 	INFO("%s VSYNCS\n", msg);
@@ -46,15 +42,15 @@ void print_vsyncs(char *msg, long *va, int sz)
 	}
 }
 
-/*******************************************************************************
- * Description
- *	main - This is the main function
- * Parameters
- *	int argc - The number of command line arguments
- *	char *argv[] - Each command line argument in an array
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This is the main function
+* @param argc - The number of command line arguments
+* @param *argv[] - Each command line argument in an array
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int main(int argc, char *argv[])
 {
 	int ret = 0, size;

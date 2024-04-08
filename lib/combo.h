@@ -10,9 +10,8 @@
 #define ICL_PHY_MISC(port)            _MMIO_PORT(port, _ICL_PHY_MISC_A, _ICL_PHY_MISC_B)
 #define ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN (1 << 23)
 #define COMP_INIT                     (1 << 31)
-/*
- * CNL/ICL Port/COMBO-PHY Registers
- */
+
+// CNL/ICL Port/COMBO-PHY Registers
 #define _ICL_COMBOPHY_A               0x162000
 #define _ICL_COMBOPHY_B               0x6C000
 #define _EHL_COMBOPHY_C               0x160000

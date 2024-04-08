@@ -16,18 +16,17 @@
 #include "combo.h"
 
 
-/*******************************************************************************
- * Description
- *  calc_steps_to_sync - This function calculates how many steps we need to take
- *  in order to synchronize the primary and secondary systems given the delta
- *  between primary and secondary and the shift that we need to make in terms of
- *  percentage. Each steps is a single vsync period (typically 16.666 ms).
- * Parameters
- *	double time_diff - The time difference in between the two systems in ms.
- *	double shift - The percentage shift that we need to make in our vsyncs.
- * Return val
- *  int
- ******************************************************************************/
+/**
+* @brief
+* This function calculates how many steps we need to take
+* in order to synchronize the primary and secondary systems given the delta
+* between primary and secondary and the shift that we need to make in terms of
+* percentage. Each steps is a single vsync period (typically 16.666 ms).
+* @param time_diff - The time difference in between the two systems in ms.
+* @param shift - The percentage shift that we need to make in our vsyncs.
+* @return int
+*/
+
 int calc_steps_to_sync(double time_diff, double shift)
 {
 	return (int) ((time_diff * 100) / shift);
@@ -35,16 +34,16 @@ int calc_steps_to_sync(double time_diff, double shift)
 
 #if !TESTING
 
-/*******************************************************************************
- * Description
- *	make_timer - This function creates a timer.
- * Parameters
- *	long expire_ms - The time period in ms after which the timer will fire.
- *	void *user_ptr - A pointer to pass to the timer handler
- *	timer_t *t     - A pointer to a pointer where we need to store the timer
- * Return val
- *	int - 0 == SUCCESS, -1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+*	This function creates a timer.
+* @param  expire_ms - The time period in ms after which the timer will fire.
+* @param *user_ptr - A pointer to pass to the timer handler
+* @param *t - A pointer to a pointer where we need to store the timer
+* @return
+* - 0 == SUCCESS
+* - -1 = FAILURE
+*/
 int make_timer(long expire_ms, void *user_ptr, timer_t *t, reset_func reset)
 {
 	struct sigevent         te;
@@ -53,7 +52,7 @@ int make_timer(long expire_ms, void *user_ptr, timer_t *t, reset_func reset)
 	int                     sig_no = SIGRTMIN;
 
 
-	/* Set up signal handler. */
+	// Set up signal handler
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = reset;
 	sigemptyset(&sa.sa_mask);
@@ -62,7 +61,7 @@ int make_timer(long expire_ms, void *user_ptr, timer_t *t, reset_func reset)
 		return -1;
 	}
 
-	/* Set and enable alarm */
+	// Set and enable alarm
 	te.sigev_notify = SIGEV_SIGNAL;
 	te.sigev_signo = sig_no;
 	te.sigev_value.sival_ptr = user_ptr;

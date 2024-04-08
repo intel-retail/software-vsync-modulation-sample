@@ -16,21 +16,19 @@ combo_phy_reg combo_table[] = {
 	{REG(DPLL3_CFGCR0), REG(DPLL3_CFGCR1), 0, 1},
 };
 
-/*******************************************************************************
- * Description
- *  find_enabled_dplls - This function finds out which dplls are enabled on the
- *  current system. It does this by first finding out the values of
- *	TRANS_DDI_FUNC_CTL register for all the pipes. Bits 30:27 have the DDI which
- *  this pipe is connected to. Once the DDI is found, we match the DDI with the
- *	available ones on this platform. Then, we read DPCLKA_CFGCR0 or DPCLKA_CFGCR1
- *	depending upon which DDI is enabled. Finally, the corresponding clock_bits
- *	tell us which DPLL is turned on for this pipe. Now, we can go about reading
- *	the corresponding DPLLs.
- * Parameters
- *	None
- * Return val
- *  void
- ******************************************************************************/
+/**
+* @brief
+* This function finds out which dplls are enabled on the
+* current system. It does this by first finding out the values of
+* TRANS_DDI_FUNC_CTL register for all the pipes. Bits 30:27 have the DDI which
+* this pipe is connected to. Once the DDI is found, we match the DDI with the
+* available ones on this platform. Then, we read DPCLKA_CFGCR0 or DPCLKA_CFGCR1
+* depending upon which DDI is enabled. Finally, the corresponding clock_bits
+* tell us which DPLL is turned on for this pipe. Now, we can go about reading
+* the corresponding DPLLs.
+* @param None
+* @return void
+*/
 void find_enabled_dplls()
 {
 	int i, j, val, ddi_select, dpclk;
@@ -41,31 +39,28 @@ void find_enabled_dplls()
 		REG(TRANS_DDI_FUNC_CTL_D),
 	};
 
-	/*
-	 * According to the BSpec:
-	 * 0000b	None
-	 * 0001b	DDI A
-	 * 0010b	DDI B
-	 * 0011b	DDI C
-	 * 0100b	DDI USBC1
-	 * 0101b	DDI USBC2
-	 * 0110b	DDI USBC3
-	 * 0111b	DDI USBC4
-	 * 1000b	DDI USBC5
-	 * 1001b	DDI USBC6
-	 * 1000b	DDI D
-	 * 1001b	DDI E
-	 *
-	 * DISPLAY_CCU / DPCLKA Clock	DE Internal Clock
-	 * DDIA_DE_CLK	                DDIA
-	 * DDIB_DE_CLK	                USBC1
-	 * DDII_DE_CLK	                USBC2
-	 * DDIJ_DE_CLK	                USBC3
-	 * DDIK_DE_CLK	                USBC4
-	*/
+	// According to the BSpec:
+	// 0000b	None
+	// 0001b	DDI A
+	// 0010b	DDI B
+	// 0011b	DDI C
+	// 0100b	DDI USBC1
+	// 0101b	DDI USBC2
+	// 0110b	DDI USBC3
+	// 0111b	DDI USBC4
+	// 1000b	DDI USBC5
+	// 1001b	DDI USBC6
+	// 1000b	DDI D
+	// 1001b	DDI E
+	// DISPLAY_CCU / DPCLKA Clock	DE Internal Clock
+	// DDIA_DE_CLK	                DDIA
+	// DDIB_DE_CLK	                USBC1
+	// DDII_DE_CLK	                USBC2
+	// DDIJ_DE_CLK	                USBC3
+	// DDIK_DE_CLK	                USBC4
 
 	for(i = 0; i < ARRAY_SIZE(trans_ddi_func_ctl); i++) {
-		/* First read the TRANS_DDI_FUNC_CTL to find if this pipe is enabled or not */
+		// First read the TRANS_DDI_FUNC_CTL to find if this pipe is enabled or not
 		val = READ_OFFSET_DWORD(trans_ddi_func_ctl[i].addr);
 		DBG("0x%X = 0x%X\n", trans_ddi_func_ctl[i].addr, val);
 		if(!(val & BIT(31))) {
@@ -73,27 +68,26 @@ void find_enabled_dplls()
 			continue;
 		}
 
-		/* TRANS_DDI_FUNC_CTL bits 30:27 have the DDI which this pipe is connected to */
+		// TRANS_DDI_FUNC_CTL bits 30:27 have the DDI which this pipe is connected to
 		ddi_select = GETBITS_VAL(val, 30, 27);
 		DBG("ddi_select = 0x%X\n", ddi_select);
 
 		for(j = 0; j < platform_table[supported_platform].ds_size; j++) {
-			/* Match the DDI with the available ones on this platform */
+			// Match the DDI with the available ones on this platform
 			if(platform_table[supported_platform].ds[j].de_clk == ddi_select) {
 
-				/* Read DPCLKA_CFGCR0 or DPCLKA_CFGCR1 depending upon which DDI is enabled */
+				// Read DPCLKA_CFGCR0 or DPCLKA_CFGCR1 depending upon which DDI is enabled
 				dpclk = READ_OFFSET_DWORD(platform_table[supported_platform].ds[j].dpclk.addr);
 				DBG("0x%X = 0x%X\n", platform_table[supported_platform].ds[j].dpclk.addr, dpclk);
-				/* DPCLKA_CFGCR must have the DDI's clock bit set to 0 (turned on) */
+				// DPCLKA_CFGCR must have the DDI's clock bit set to 0 (turned on)
 				if(dpclk & BIT(platform_table[supported_platform].ds[j].clock_bit)) {
 					ERR("Clock is Off\n");
 					break;
 				}
-				/*
-				 * Since there are only 2 bits for all DPLLs, it is safe to
-				 * assume that the high order bit is just one more than the
-				 * low order bit
-				 */
+
+				// Since there are only 2 bits for all DPLLs, it is safe to
+				// assume that the high order bit is just one more than the
+				// low order bit
 				platform_table[supported_platform].ds[j].dpll_num = GETBITS_VAL(dpclk,
 						platform_table[supported_platform].ds[j].mux_select_low_bit+1,
 						platform_table[supported_platform].ds[j].mux_select_low_bit);
@@ -109,15 +103,12 @@ void find_enabled_dplls()
 	}
 }
 
-/*******************************************************************************
- * Description
- *	find_enabled_combo_phys - This function finds out which of the Combo phys are
- *	on.
- * Parameters
- *	NONE
- * Return val
- *	int - The number of combo phys that are enabled
- ******************************************************************************/
+/**
+* @brief
+* This function finds out which of the Combo phys are on.
+* @param None
+* @return The number of combo phys that are enabled
+*/
 int find_enabled_combo_phys()
 {
 	int enabled = 0;
@@ -144,16 +135,14 @@ int find_enabled_combo_phys()
 	return enabled;
 }
 
-/*******************************************************************************
- * Description
- *	get_val_from_bit- This function finds the value from a bit within a table
- * Parameters
- *	div_val *dt - This is the table to search for a val from.
- *	int dt_size - The size of this table
- *  int bit - The bit to search for
- * Return val
- *	int - The value to return corresponding to the bit
- ******************************************************************************/
+/**
+* @brief
+* This function finds the value from a bit within a table
+* @param *dt - This is the table to search for a val from.
+* @param dt_size - The size of this table
+* @param bit - The bit to search for
+* @return The value to return corresponding to the bit
+*/
 int get_val_from_bit(div_val *dt, int dt_size, int bit)
 {
 	int i, val = 0;
@@ -169,17 +158,15 @@ int get_val_from_bit(div_val *dt, int dt_size, int bit)
 	return val;
 }
 
-/*******************************************************************************
- * Description
- *	program_combo_phys- This function programs Combo phys on the system
- * Parameters
- *	double time_diff - This is the time difference in between the primary and the
- *	secondary systems in ms. If master is ahead of the slave , then the time
- *	difference is a positive number otherwise negative.
- *	timer_t *t     - A pointer to a pointer where we need to store the timer
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* This function programs Combo phys on the system
+* @param time_diff - This is the time difference in between the primary and the
+* secondary systems in ms. If master is ahead of the slave , then the time
+* difference is a positive number otherwise negative.
+* @param *t - A pointer to a pointer where we need to store the timer
+* @return void
+*/
 void program_combo_phys(double time_diff, timer_t *t)
 {
 	double shift = SHIFT;
@@ -196,19 +183,19 @@ void program_combo_phys(double time_diff, timer_t *t)
 		{4, 3},
 	};
 
-	/* Cycle through all the Combo phys */
+	// Cycle through all the Combo phys
 	for(int i = 0; i < ARRAY_SIZE(combo_table); i++) {
-		/* Skip any that aren't enabled */
+		// Skip any that aren't enabled
 		if(!combo_table[i].enabled) {
 			continue;
 		}
 #if TESTING
-		/* ADL */
+		// ADL
 		/*
 		combo_table[i].cfgcr0.orig_val = 0x01c001a5;
 		combo_table[i].cfgcr1.orig_val = 0x013331cf;
 		*/
-		/* TGL */
+		// TGL
 		combo_table[i].cfgcr0.orig_val = 0x00B001B1;
 		combo_table[i].cfgcr1.orig_val = 0x00000e84;
 #else
@@ -219,10 +206,8 @@ void program_combo_phys(double time_diff, timer_t *t)
 			shift *= -1;
 		}
 
-		/*
-		 * For whichever PHY we find, let's set the done flag to 0 so that we can later
-		 * have a timer for it to reset the default values back in their registers
-		 */
+		// For whichever PHY we find, let's set the done flag to 0 so that we can later
+		// have a timer for it to reset the default values back in their registers
 		combo_table[i].done = 0;
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
@@ -233,13 +218,11 @@ void program_combo_phys(double time_diff, timer_t *t)
 				combo_table[i].cfgcr0.addr, combo_table[i].cfgcr0.orig_val, 
 				combo_table[i].cfgcr1.addr, combo_table[i].cfgcr1.orig_val);
 
-		/*
-		 * Symbol clock frequency in MHz (base) = DCO Divider * Reference frequency in MHz /  (5 * Pdiv * Qdiv * Kdiv)
-		 * DCO Divider comes from DPLL_CFGCR0 DCO Integer + (DPLL_CFGCR0 DCO Fraction / 2^15)
-		 * Pdiv from DPLL_CFGCR1 Pdiv
-		 * Qdiv from DPLL_CFGCR1 Qdiv Mode ? DPLL_CFGCR1 Qdiv Ratio : 1
-		 * Kdiv from DPLL_CFGCR1 Kdiv
-		 */
+		// Symbol clock frequency in MHz (base) = DCO Divider// Reference frequency in MHz /  (5// Pdiv// Qdiv// Kdiv)
+		// DCO Divider comes from DPLL_CFGCR0 DCO Integer + (DPLL_CFGCR0 DCO Fraction / 2^15)
+		// Pdiv from DPLL_CFGCR1 Pdiv
+		// Qdiv from DPLL_CFGCR1 Qdiv Mode ? DPLL_CFGCR1 Qdiv Ratio : 1
+		// Kdiv from DPLL_CFGCR1 Kdiv
 		int i_fbdiv_intgr_9_0 = GETBITS_VAL(combo_table[i].cfgcr0.orig_val, 9, 0);
 		int i_fbdivfrac_14_0 = GETBITS_VAL(combo_table[i].cfgcr0.orig_val, 24, 10);
 		int pdiv_bit = GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 5, 2);
@@ -288,20 +271,18 @@ void program_combo_phys(double time_diff, timer_t *t)
 	}
 }
 
-/*******************************************************************************
- * Description
- *	wait_until_combo_done - This function waits until the Combo programming is
- *	finished. There is a timer for which time the new values will remain in
- *	effect. After that timer expires, the original values will be restored.
- * Parameters
- *	timer_t t - The timer which needs to be deleted
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+*	This function waits until the Combo programming is
+*	finished. There is a timer for which time the new values will remain in
+*	effect. After that timer expires, the original values will be restored.
+* @param t - The timer which needs to be deleted
+* @return void
+*/
 void wait_until_combo_done(timer_t t)
 {
 	TRACING();
-	/* Wait to write back the original value */
+	// Wait to write back the original value
 	for(int i = 0; i < ARRAY_SIZE(combo_table); i++) {
 		while(!combo_table[i].done) {
 			usleep(1000);
@@ -311,18 +292,18 @@ void wait_until_combo_done(timer_t t)
 	cleanup_list();
 }
 
-/*******************************************************************************
- * Description
- *  program_combo_mmio - This function programs the Combo Phy MMIO registers
- *  needed to move avsync period for a system.
- * Parameters
- *	combo_phy_reg *pr - The data structure that holds all of the PHY registers
- *	that need to be programmed
- *	int mod - This parameter tells the function whether to program the original
- *	values or the modified ones. 0 = Original, 1 = modified
- * Return val
- *  void
- ******************************************************************************/
+/**
+* @brief
+* This function programs the Combo Phy MMIO registers
+* needed to move avsync period for a system.
+* @param *pr - The data structure that holds all of the PHY registers
+* that need to be programmed
+* @param mod - This parameter tells the function whether to program the original
+* values or the modified ones.
+* - 0 = Original
+* - 1 = modified
+* @return void
+*/
 void program_combo_mmio(combo_phy_reg *pr, int mod)
 {
 #if !TESTING
@@ -331,23 +312,21 @@ void program_combo_mmio(combo_phy_reg *pr, int mod)
 #endif
 }
 
-/*******************************************************************************
- * Description
- *  reset_combo - This function resets the Combo Phy MMIO registers to their
- *  original value. It gets executed whenever a timer expires. We program MMIO
- *	registers of the PHY in this function becase we have waited for a certain
- *  time period to get the primary and secondary systems vsync in sync and now
- *	it is time to reprogram the default values for the secondary system's PHYs.
- * Parameters
- *	int sig - The signal that fired
- *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
- *  further information about the signal
- *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
- *  The structure pointed to by this field contains signal context information
- *  that was saved on the user-space stack by the kernel
- * Return val
- *  void
- ******************************************************************************/
+/**
+* @brief
+* This function resets the Combo Phy MMIO registers to their
+* original value. It gets executed whenever a timer expires. We program MMIO
+* registers of the PHY in this function becase we have waited for a certain
+* time period to get the primary and secondary systems vsync in sync and now
+* it is time to reprogram the default values for the secondary system's PHYs.
+* @param sig - The signal that fired
+* @param *si - A pointer to a siginfo_t, which is a structure containing
+* further information about the signal
+* @param *uc - This is a pointer to a ucontext_t structure, cast to void *.
+* The structure pointed to by this field contains signal context information
+* that was saved on the user-space stack by the kernel
+* @return void
+*/
 void reset_combo(int sig, siginfo_t *si, void *uc)
 {
 	user_info *ui = (user_info *) si->si_value.sival_ptr;
@@ -365,14 +344,12 @@ void reset_combo(int sig, siginfo_t *si, void *uc)
 }
 
 
-/*******************************************************************************
- * Description
- *  cleanup_list - This function deallocates all members of the dpll_enabled_list
- * Parameters
- *	NONE
- * Return val
- *  void
- ******************************************************************************/
+/**
+* @brief
+* This function deallocates all members of the dpll_enabled_list
+* @param None
+* @return void
+*/
 void cleanup_list()
 {
 	if(dpll_enabled_list) {

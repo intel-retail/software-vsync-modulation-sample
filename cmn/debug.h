@@ -10,13 +10,13 @@ enum {
 	TRACE,
 };
 
-/*
- * Set it to 0 or higher with 0 being lowest number of messages
- * 0 = Only errors show up
- * 1 = Errors + Info messages
- * 2 = Errors + Info messages + Debug messages
- * 3 = Errors + Info messages + Debug messages + Trace calls
- */
+/**
+* Set it to 0 or higher with 0 being lowest number of messages
+* 0 = Only errors show up
+* 1 = Errors + Info messages
+* 2 = Errors + Info messages + Debug messages
+* 3 = Errors + Info messages + Debug messages + Trace calls
+*/
 static int dbg_lvl = INFO;
 
 #define _PRINT(prefix, fmt, ...)  \
