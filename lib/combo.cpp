@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 #include <math.h>
 #include <debug.h>
 #include <signal.h>
@@ -18,12 +21,12 @@ combo_phy_reg combo_table[] = {
  * Description
  *  find_enabled_dplls - This function finds out which dplls are enabled on the
  *  current system. It does this by first finding out the values of
- * 	TRANS_DDI_FUNC_CTL register for all the pipes. Bits 30:27 have the DDI which
+ *	TRANS_DDI_FUNC_CTL register for all the pipes. Bits 30:27 have the DDI which
  *  this pipe is connected to. Once the DDI is found, we match the DDI with the
- * 	available ones on this platform. Then, we read DPCLKA_CFGCR0 or DPCLKA_CFGCR1
- * 	depending upon which DDI is enabled. Finally, the corresponding clock_bits
- * 	tell us which DPLL is turned on for this pipe. Now, we can go about reading
- * 	the corresponding DPLLs.
+ *	available ones on this platform. Then, we read DPCLKA_CFGCR0 or DPCLKA_CFGCR1
+ *	depending upon which DDI is enabled. Finally, the corresponding clock_bits
+ *	tell us which DPLL is turned on for this pipe. Now, we can go about reading
+ *	the corresponding DPLLs.
  * Parameters
  *	None
  * Return val
@@ -225,7 +228,7 @@ void program_combo_phys(double time_diff, timer_t *t)
 		int steps = calc_steps_to_sync(time_diff, shift);
 		DBG("steps are %d\n", steps);
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
-		make_timer((long) steps, ui, t);
+		make_timer((long) steps, ui, t, reset_combo);
 #endif
 		DBG("OLD VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
 				combo_table[i].cfgcr0.orig_val, combo_table[i].cfgcr1.orig_val);
@@ -243,8 +246,9 @@ void program_combo_phys(double time_diff, timer_t *t)
 		int pdiv = get_val_from_bit(pdiv_table, ARRAY_SIZE(pdiv_table), pdiv_bit);
 		int kdiv_bit = GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 8, 6);
 		int kdiv = get_val_from_bit(kdiv_table, ARRAY_SIZE(kdiv_table), kdiv_bit);
+		int qdiv_mode = combo_table[i].cfgcr1.orig_val & BIT(9);
 		/* TODO: In case we run into some other weird dividers, then we may need to revisit this */
-		int qdiv = (kdiv == 2) ? GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 17, 10) : 1;
+		int qdiv = (kdiv == 2 && qdiv_mode == 1) ? GETBITS_VAL(combo_table[i].cfgcr1.orig_val, 17, 10) : 1;
 		int ro_div_bias_frac = i_fbdivfrac_14_0 << 5 | ((i_fbdiv_intgr_9_0 & GENMASK(2, 0)) << 19);
 		int ro_div_bias_int = i_fbdiv_intgr_9_0 >> 3;
 		double dco_divider = 4*((double) ro_div_bias_int + ((double) ro_div_bias_frac / pow(2,22)));
@@ -261,8 +265,6 @@ void program_combo_phys(double time_diff, timer_t *t)
 			i_fbdiv_intgr_9_0 -= 1;
 			new_ro_div_bias_frac += 0xFFFFF;
 		}
-		combo_table[i].cfgcr0.mod_val &= ~GENMASK(9, 0);
-		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		double new_i_fbdivfrac_14_0  = ((long int) new_ro_div_bias_frac & ~BIT(19)) >> 5;
 
 		DBG("old pll_freq \t %f\n", pll_freq);
@@ -276,7 +278,8 @@ void program_combo_phys(double time_diff, timer_t *t)
 		DBG("new fbdivfrac \t 0x%X\n", (int) new_i_fbdivfrac_14_0);
 		DBG("new ro_div_frac \t 0x%X\n", (int) new_ro_div_bias_frac);
 
-		combo_table[i].cfgcr0.mod_val &= ~GENMASK(24, 10);
+		combo_table[i].cfgcr0.mod_val &= ~GENMASK(24, 0);
+		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		combo_table[i].cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
 
 		DBG("NEW VALUES\n cfgcr0 \t 0x%X\n", combo_table[i].cfgcr0.mod_val);
@@ -325,3 +328,35 @@ void program_combo_mmio(combo_phy_reg *pr, int mod)
 #endif
 }
 
+/*******************************************************************************
+ * Description
+ *  reset_combo - This function resets the Combo Phy MMIO registers to their
+ *  original value. It gets executed whenever a timer expires. We program MMIO
+ *	registers of the PHY in this function becase we have waited for a certain
+ *  time period to get the primary and secondary systems vsync in sync and now
+ *	it is time to reprogram the default values for the secondary system's PHYs.
+ * Parameters
+ *	int sig - The signal that fired
+ *	siginfo_t *si - A pointer to a siginfo_t, which is a structure containing
+ *  further information about the signal
+ *	void *uc - This is a pointer to a ucontext_t structure, cast to void *.
+ *  The structure pointed to by this field contains signal context information
+ *  that was saved on the user-space stack by the kernel
+ * Return val
+ *  void
+ ******************************************************************************/
+void reset_combo(int sig, siginfo_t *si, void *uc)
+{
+	user_info *ui = (user_info *) si->si_value.sival_ptr;
+	if(!ui) {
+		return;
+	}
+
+	DBG("timer done\n");
+	combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
+	program_combo_mmio(cr, 0);
+	DBG("DEFAULT VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
+			cr->cfgcr0.orig_val, cr->cfgcr1.orig_val);
+	cr->done = 1;
+	delete ui;
+}

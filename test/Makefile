@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: MIT
 
 export PWD=$(shell pwd)
-BINNAME=$(notdir $(PWD))
+BINNAME=vsync_test
 MAKE += --no-print-directory
 export CC=g++
 export DBG_FLAGS?=-Ofast
-export LIBS=-L. -L../lib  -lvsyncalter
+export LIBS=-L. -L../lib  -L/home/ssingh/workspace/tools/vsync/lib -lvsyncalter
 export INCLUDES=-I. -I../cmn
 export CFLAGS=-c -Wall
 export HEADERS=$(wildcard *.h)
@@ -28,7 +28,7 @@ $(BINNAME): $(OBJECTS)
 		strip -x $@; \
 	fi
 
-.cpp.o: $(HEADERS)
+.cpp.o:
 	@echo $<
 	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(INCLUDES) $< 
 
