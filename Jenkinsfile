@@ -45,7 +45,7 @@ pipeline {
                 COVERITY_CHECKER_CONFIG = '--concurrency --security --rule --enable-constraint-fpp --enable-fnptr --enable-virtual'
                 COVERITY_COMPILER = 'c++'
                 COVERITY_COMPILER_TYPE = 'gcc'
-                SDLE_UPLOAD_PROJECT_ID = '21206'
+                SDLE_UPLOAD_PROJECT_ID = '21344'
             }
             steps {
                 rbheStaticCodeScan()
