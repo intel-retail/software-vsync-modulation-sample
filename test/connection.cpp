@@ -271,19 +271,19 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 * @brief
 * Constructor of ptp_connection class. This just initializes a few class members
 * @param *ifc - The PTP interface of the server. For examle: enp176s0
-* @param *ip - The ethernet address of the server. For example:
+* @param *mac - The ethernet MAC address of the server. For example:
 *		84:47:09:04:eb:0e
 * @return void
 */
-ptp_connection::ptp_connection(char *ifc, char *ip)
+ptp_connection::ptp_connection(char *ifc, char *mac)
 {
 	con_type = PTP;
 	memset(server_ip, 0, MAX_LEN);
 	memset(iface, 0, MAX_LEN);
 
 	strncpy(iface, ifc, MAX_LEN-1);
-	if(ip) {
-		strncpy(server_ip, ip, MAX_LEN-1);
+	if(mac) {
+		strncpy(server_ip, mac, MAX_LEN-1);
 	}
 	memset(&dest_sa, 0, sizeof(dest_sa));
 }

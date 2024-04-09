@@ -4,14 +4,22 @@ Building steps:
 1) Type ```make release``` from the main directory. It compiles everything and creates a 
    release folder which can then be copied to the target systems.
 
-Building of this program has been successfully tested on both Ubuntu 20 and Fedora 30.
+Building of this program has been successfully tested on both Ubuntu 2x and Fedora 30.<br>
+Please note that this document was written based on Ubuntu
 
-Preparing two systems for PTP communication:
-In order to prepare two systems, please follow these steps:
+Preparing two systems for PTP communication:<br>
+In order to prepare two systems, please follow these steps:<br>
 1) There should be a network cable directly connecting the ethernet ports of the two
 systems.
-2) Apply a patch in i915 driver which allows it to provide vsync timestamps in real time
-instead of the default monotonic time.
+2) Apply __[the monotonic timstamp patch](./resources/0001-Revert-drm-vblank-remove-drm_timestamp_monotonic-par.patch)__
+to Linux kernel i915 driver which allows it to provide vsync timestamps in real time
+instead of the default monotonic time.<br>
+Note that the monotonic timestamp patch is generated based on Linux v6.4 and has been tested on Linux v6.4 and v6.5.<br>
+Please follow the steps to disable monotonic timestamp after installing the local built Linux image on a target.<br>
+	1. Add ```drm.timestamp_monotonic=0``` option to __GRUB_CMDLINE_LINUX__ in /etc/default/grub
+	2. Update __GRUB_DEFAULT__ in /etc/default/grub to address the local built Linux image
+	3. Run ```update-grub``` to apply the change
+	4. Reboot a target
 3) Turn off NTP time synchronization service by using this command:
 	```timedatectl set-ntp no```
 4) Run ptp sync on both the systems as root user.
@@ -20,7 +28,7 @@ instead of the default monotonic time.
 	On the secondary system, run the following command:
 	```ptp4l -i enp176s0 -m -f gPTP.cfg -s```
 
-	There must be a gPTP.cfg file present in the same directory from where you run the
+	There must be a __[gPTP.cfg](./resources/gPTP.cfg)__ file present in the same directory from where you run the
 	above two commands. The contents of this file should look like this:
 
 	```shell
@@ -42,14 +50,12 @@ instead of the default monotonic time.
 	path_trace_enabled	1
 	follow_up_info		1
 	transportSpecific	0x1
-	ptp_dst_mac		01:80:C2:00:00:0E
 	network_transport	L2
 	delay_mechanism		P2P
 	```
  
 	The output on the primary system after running the above command should look
 	like this:
-
 	```console
 	ptp4l[13416.983]: selected /dev/ptp1 as PTP clock
 	ptp4l[13417.002]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
@@ -61,7 +67,6 @@ instead of the default monotonic time.
  
 	The output on the secondary system after running the above command should
 	look like this:
-
 	```console
 	ptp4l[14816.313]: selected /dev/ptp1 as PTP clock
 	ptp4l[14816.328]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
@@ -86,8 +91,10 @@ instead of the default monotonic time.
 	ptp4l[14835.286]: rms    3 max    5 freq  -6793 +/-   3 delay    13 +/-   0
 	```
  
+	Please make it sure that the secondary sytem refers to the primary's precision time
+	by checking if there is the __"new foreign master"__ message in a log<br>
 	Note that the rms value should be decreasing with each line and should go 
-	down to single digits.
+	down to single digits.<br>
 
 6) While step #4 is still executing, synchronize wall clocks of the system as
 the root user.
@@ -106,17 +113,16 @@ Installing and running the programs:
 2) On both systems, go to the directory where these files exist and set environment variable:
 export LD_LIBRARY_PATH=.
 3) On the primary system, run it as follows:
-	```./vsync_test pri [PRIMARY's PTP PORT]```
-3) On the secondary system, run it as follows:
-	```./vsync_test sec PRIMARY'S_NAME_OR_IP [PRIMARY'S ETH ADDR] [sync after # us]```
+	```./vsync_test pri [PTP_ETH_Interface]```
+4) On the secondary system, run it as follows:
+	```./vsync_test sec PTP_ETH_Interface [Primary_ETH_MAC_Addr] [sync after # us]```
 
 This program runs in server mode on the primary system and in client mode on the 
 secondary system.
 
 If using PTP protocol to communicate between primary and secondary, there are some extra
-parameters required. The primary system must identify the PTP port (ex: enp176s0). The
-secondary system also requires the same PTP port (of primary) as well as this port's
-ethernet address.
+parameters required. The primary system must identify the PTP Interface (ex: enp176s0). The
+secondary system also requires its PTP interface as well as this port's ethernet MAC address.
 An example of PTP communication between primary and secondary looks like this:
 On the primary system, run it as follows:
 	```./vsync_test pri enp176s0```
