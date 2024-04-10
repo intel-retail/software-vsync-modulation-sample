@@ -6,9 +6,11 @@
 #include <signal.h>
 #include <unistd.h>
 #include <memory.h>
+#include <time.h>
 #include "mmio.h"
 #include "combo.h"
 
+list<ddi_sel *> *dpll_enabled_list = NULL;
 
 combo_phy_reg combo_table[] = {
 	{REG(DPLL0_CFGCR0), REG(DPLL0_CFGCR1), 0, 1},
@@ -230,8 +232,9 @@ void program_combo_phys(double time_diff, timer_t *t)
 		user_info *ui = new user_info(COMBO, &combo_table[i]);
 		make_timer((long) steps, ui, t, reset_combo);
 #endif
-		DBG("OLD VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
-				combo_table[i].cfgcr0.orig_val, combo_table[i].cfgcr1.orig_val);
+		DBG("OLD VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
+				combo_table[i].cfgcr0.addr, combo_table[i].cfgcr0.orig_val, 
+				combo_table[i].cfgcr1.addr, combo_table[i].cfgcr1.orig_val);
 
 		/*
 		 * Symbol clock frequency in MHz (base) = DCO Divider * Reference frequency in MHz /  (5 * Pdiv * Qdiv * Kdiv)
@@ -282,22 +285,23 @@ void program_combo_phys(double time_diff, timer_t *t)
 		combo_table[i].cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
 		combo_table[i].cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
 
-		DBG("NEW VALUES\n cfgcr0 \t 0x%X\n", combo_table[i].cfgcr0.mod_val);
+		DBG("NEW VALUES\n cfgcr0 [0x%X] =\t 0x%X\n", combo_table[i].cfgcr0.addr,
+		combo_table[i].cfgcr0.mod_val);
 		program_combo_mmio(&combo_table[i], 1);
 	}
 }
 
 /*******************************************************************************
  * Description
- *	check_if_combo_done - This function checks to see if the Combo programming is
+ *	wait_until_combo_done - This function waits until the Combo programming is
  *	finished. There is a timer for which time the new values will remain in
  *	effect. After that timer expires, the original values will be restored.
  * Parameters
- *	NONE
+ *	timer_t t - The timer which needs to be deleted
  * Return val
  *	void
  ******************************************************************************/
-void check_if_combo_done()
+void wait_until_combo_done(timer_t t)
 {
 	TRACING();
 	/* Wait to write back the original value */
@@ -306,6 +310,8 @@ void check_if_combo_done()
 			usleep(1000);
 		}
 	}
+	timer_delete(t);
+	cleanup_list();
 }
 
 /*******************************************************************************
@@ -355,8 +361,29 @@ void reset_combo(int sig, siginfo_t *si, void *uc)
 	DBG("timer done\n");
 	combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
 	program_combo_mmio(cr, 0);
-	DBG("DEFAULT VALUES\n cfgcr0 \t 0x%X\n cfgcr1 \t 0x%X\n",
-			cr->cfgcr0.orig_val, cr->cfgcr1.orig_val);
+	DBG("DEFAULT VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
+			cr->cfgcr0.addr, cr->cfgcr0.orig_val, cr->cfgcr1.addr, cr->cfgcr1.orig_val);
 	cr->done = 1;
 	delete ui;
+}
+
+
+/*******************************************************************************
+ * Description
+ *  cleanup_list - This function deallocates all members of the dpll_enabled_list
+ * Parameters
+ *	NONE
+ * Return val
+ *  void
+ ******************************************************************************/
+void cleanup_list()
+{
+	if(dpll_enabled_list) {
+		for(list<ddi_sel *>::iterator it = dpll_enabled_list->begin();
+		it != dpll_enabled_list->end(); it++) {
+			delete *it;
+		}
+		delete dpll_enabled_list;
+		dpll_enabled_list = NULL;
+	}
 }
