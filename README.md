@@ -1,17 +1,24 @@
 This program allows two systems to synchronize their vertical sync firing times.
 
-Building steps:
-1) Type ```make release``` from the main directory. It compiles everything and creates a 
-   release folder which can then be copied to the target systems.
+Generating Doxygen documents:<br>
+Please install doxygen and graphviz packages before generating Doxygen documents:
+	```sudo apt install doxygen graphviz```
+1. Type ```make doxygen``` from the main directory. It will genarte SW Genlock doxygen documents
+	to output/doxygen folder.
+2. Open output/doxygen/html/index.html with a web-browser
+
+Building steps:<br>
+1. Type ```make release``` from the main directory. It compiles everything and creates a 
+   output/release folder which can then be copied to the target systems.
 
 Building of this program has been successfully tested on both Ubuntu 2x and Fedora 30.<br>
 Please note that this document was written based on Ubuntu
 
 Preparing two systems for PTP communication:<br>
 In order to prepare two systems, please follow these steps:<br>
-1) There should be a network cable directly connecting the ethernet ports of the two
+1. There should be a network cable directly connecting the ethernet ports of the two
 systems.
-2) Apply __[the monotonic timstamp patch](./resources/0001-Revert-drm-vblank-remove-drm_timestamp_monotonic-par.patch)__
+2. Apply __[the monotonic timstamp patch](./resources/0001-Revert-drm-vblank-remove-drm_timestamp_monotonic-par.patch)__
 to Linux kernel i915 driver which allows it to provide vsync timestamps in real time
 instead of the default monotonic time.<br>
 Note that the monotonic timestamp patch is generated based on Linux v6.4 and has been tested on Linux v6.4 and v6.5.<br>
@@ -20,23 +27,21 @@ Please follow the steps to disable monotonic timestamp after installing the loca
 	2. Update __GRUB_DEFAULT__ in /etc/default/grub to address the local built Linux image
 	3. Run ```update-grub``` to apply the change
 	4. Reboot a target
-3) Turn off NTP time synchronization service by using this command:
+3. Turn off NTP time synchronization service by using this command:
 	```timedatectl set-ntp no```
-4) Run ptp sync on both the systems as root user.
+4. Run ptp sync on both the systems as root user.<br>
 	On the primary system, run the following command:
-	```ptp4l -i enp176s0 -m -f gPTP.cfg```
+	```ptp4l -i enp176s0 -m -f gPTP.cfg```<br>
 	On the secondary system, run the following command:
 	```ptp4l -i enp176s0 -m -f gPTP.cfg -s```
 
 	There must be a __[gPTP.cfg](./resources/gPTP.cfg)__ file present in the same directory from where you run the
-	above two commands. The contents of this file should look like this:
+	above two commands. The contents of this file should look like this:<br>
 
 	```shell
-	#
 	# 802.1AS example configuration containing those attributes which
 	# differ from the defaults.  See the file, default.cfg, for the
 	# complete list of available options.
-	#
 	[global]
 	gmCapable		1
 	priority1		248
@@ -53,9 +58,9 @@ Please follow the steps to disable monotonic timestamp after installing the loca
 	network_transport	L2
 	delay_mechanism		P2P
 	```
- 
+
 	The output on the primary system after running the above command should look
-	like this:
+	like this:<br>
 	```console
 	ptp4l[13416.983]: selected /dev/ptp1 as PTP clock
 	ptp4l[13417.002]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
@@ -64,9 +69,9 @@ Please follow the steps to disable monotonic timestamp after installing the loca
 	ptp4l[13420.445]: selected local clock 844709.fffe.04f07f as best master
 	ptp4l[13420.445]: assuming the grand master role
 	```
- 
+
 	The output on the secondary system after running the above command should
-	look like this:
+	look like this:<br>
 	```console
 	ptp4l[14816.313]: selected /dev/ptp1 as PTP clock
 	ptp4l[14816.328]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
@@ -90,31 +95,28 @@ Please follow the steps to disable monotonic timestamp after installing the loca
 	ptp4l[14834.285]: rms    2 max    5 freq  -6788 +/-   3 delay    13 +/-   0
 	ptp4l[14835.286]: rms    3 max    5 freq  -6793 +/-   3 delay    13 +/-   0
 	```
- 
+
 	Please make it sure that the secondary sytem refers to the primary's precision time
 	by checking if there is the __"new foreign master"__ message in a log<br>
 	Note that the rms value should be decreasing with each line and should go 
-	down to single digits.<br>
+	down to single digits.
 
-6) While step #4 is still executing, synchronize wall clocks of the system as
-the root user.
+5. While step #4 is still executing, synchronize wall clocks of the system as the root user.<br>
 	On both the primary & secondary systems, run the following command:
-	```phc2sys -s enp176s0 -O 0 -R 8 -u 8 -m```
-
+	```phc2sys -s enp176s0 -O 0 -R 8 -u 8 -m```<br>
 	In the above command, replace enp176s0 with the ethernet interface that
 	you find on your systems where the network cable is connected to.
-
 	Steps 4 & 5 will synchronize the wall clocks of the two systems. You can
 	stop these commands from executing by pressing Ctrl+C on both systems. Now
 	you are ready to execute the vsync_test.
 
-Installing and running the programs:
-1) Copy the release folder contents to both primary and secondary systems.
-2) On both systems, go to the directory where these files exist and set environment variable:
-export LD_LIBRARY_PATH=.
-3) On the primary system, run it as follows:
-	```./vsync_test pri [PTP_ETH_Interface]```
-4) On the secondary system, run it as follows:
+Installing and running the programs:<br>
+1. Copy the release folder contents to both primary and secondary systems.<br>
+2. On both systems, go to the directory where these files exist and set environment variable:
+export LD_LIBRARY_PATH=.<br>
+3. On the primary system, run it as follows:
+	```./vsync_test pri [PTP_ETH_Interface]```<br>
+4. On the secondary system, run it as follows:
 	```./vsync_test sec PTP_ETH_Interface [Primary_ETH_MAC_Addr] [sync after # us]```
 
 This program runs in server mode on the primary system and in client mode on the 
@@ -125,7 +127,7 @@ parameters required. The primary system must identify the PTP Interface (ex: enp
 secondary system also requires its PTP interface as well as this port's ethernet MAC address.
 An example of PTP communication between primary and secondary looks like this:
 On the primary system, run it as follows:
-	```./vsync_test pri enp176s0```
+	```./vsync_test pri enp176s0```<br>
 On the secondary system, run it as follows:
 	```./vsync_test sec enp176s0 84:47:09:04:eb:0e```
 
@@ -134,7 +136,7 @@ However, due to reference clock differences, we see that there is a drift pretty
 soon as we have sync'd them. We also have another capability which allows us to resync 
 as soon as it goes above a threshold. For example:  
 On the primary system, run it as follows:
-	```./vsync_test pri enp176s0```
+	```./vsync_test pri enp176s0```<br>
 On the secondary system, run it as follows:
 	```./vsync_test sec enp176s0 84:47:09:04:eb:0e 100```
 
