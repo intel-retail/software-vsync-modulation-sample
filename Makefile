@@ -1,3 +1,6 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: MIT
+
 #DIRS = $(shell find . -maxdepth 1 -type d -not -path "./.git" \
 #	   -not -path "." -not -path "./release" -not -path "./cmn" | sort)
 DIRS = lib test synctest vbltest
@@ -15,20 +18,16 @@ debug:
 		$(MAKE) -C $$dir debug; \
 	done
 
-doxygen:
-	@mkdir -p output/doxygen
-	@doxygen resources/swgen_doxy
 clean:
 	@for dir in $(DIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
 
 distclean:
-	@rm -rf output
+	@rm -rf release
 
-release:
-	@rm -rf output/release
+release: distclean
 	@$(MAKE) clean
 	@$(MAKE)
-	@mkdir -p output/release
-	@cp lib/*.so resources/gPTP.cfg test/vsync_test synctest/synctest vbltest/vbltest output/release
+	@mkdir release
+	@cp lib/*.so test/vsync_test synctest/synctest vbltest/vbltest release

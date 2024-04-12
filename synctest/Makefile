@@ -1,9 +1,12 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: MIT
+
 export PWD=$(shell pwd)
 BINNAME=$(notdir $(PWD))
 MAKE += --no-print-directory
 export CC=g++
 export DBG_FLAGS?=-Ofast
-export LIBS=-L. -L../lib  -L/home/ssingh/workspace/tools/vsync/lib -lvsyncalter
+export LIBS=-L. -L../lib  -lvsyncalter
 export INCLUDES=-I. -I../cmn
 export CFLAGS=-c -Wall
 export HEADERS=$(wildcard *.h)

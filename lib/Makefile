@@ -1,3 +1,6 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: MIT
+
 export PWD=$(shell pwd)
 BINNAME=libvsyncalter.so
 MAKE += --no-print-directory

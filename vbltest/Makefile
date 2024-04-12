@@ -1,3 +1,6 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: MIT
+
 export PWD=$(shell pwd)
 BINNAME=$(notdir $(PWD))
 MAKE += --no-print-directory
