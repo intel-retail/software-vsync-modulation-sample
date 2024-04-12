@@ -274,6 +274,7 @@ int map_cmn(int base_index, int size)
 void close_mmio_handle()
 {
 	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
+	pci_system_cleanup();
 	close(g_fd);
 }
 

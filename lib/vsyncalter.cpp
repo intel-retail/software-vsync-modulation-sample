@@ -35,41 +35,82 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <xf86drm.h>
+#include <tgl.h>
+#include <adl_s.h>
+#include <adl_p.h>
 #include "mmio.h"
 #include "dkl.h"
 #include "combo.h"
 #include "i915_pciids.h"
 
-
-phy_funcs phy[] = {
-	{"DKL",   dkl_table,   find_enabled_dkl_phys,   program_dkl_phys,   wait_until_dkl_done,   0},
-	{"COMBO", combo_table, find_enabled_combo_phys, program_combo_phys, wait_until_combo_done, 0},
-};
-
-ddi_sel adl_s_ddi_sel[] = {
-	// name     de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num
-	{"DDI_A",   1,      REG(DPCLKA_CFGCR0), 10,         0,                  0, },
-	{"DDI_C1",  4,      REG(DPCLKA_CFGCR0), 11,         2,                  0, },
-	{"DDI_C2",  5,      REG(DPCLKA_CFGCR0), 24,         4,                  0, },
-	{"DDI_C3",  6,      REG(DPCLKA_CFGCR1), 4,          0,                  0, },
-	{"DDI_C4",  7,      REG(DPCLKA_CFGCR1), 5,          2,                  0, },
-};
-
-ddi_sel tgl_ddi_sel[] = {
-	// name     de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num
-	{"DDI_A",   1,      REG(DPCLKA_CFGCR0), 10,         0,                  0, },
-	{"DDI_B",   2,      REG(DPCLKA_CFGCR0), 11,         2,                  0, },
-};
-
-
 platform platform_table[] = {
-	{"TGL",   INTEL_TGL_IDS,  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel)},
-	{"ADL_S", INTEL_ADLS_IDS, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel)},
-	{"ADL_P", INTEL_ADLP_IDS, tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel)},
+	{"TGL",   INTEL_TGL_IDS,  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel), 4},
+	{"ADL_S", INTEL_ADLS_IDS, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
+	{"ADL_P", INTEL_ADLP_IDS, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
 };
 
 int g_dev_fd = 0;
 int supported_platform = 0;
+list<phys *> *phy_enabled_list = NULL;
+
+
+/**
+* @brief
+* This function calculates how many steps we need to take
+* in order to synchronize the primary and secondary systems given the delta
+* between primary and secondary and the shift that we need to make in terms of
+* percentage. Each steps is a single vsync period (typically 16.666 ms).
+* @param time_diff - The time difference in between the two systems in ms.
+* @param shift - The percentage shift that we need to make in our vsyncs.
+* @return int
+*/
+
+int phys::calc_steps_to_sync(double time_diff, double shift)
+{
+	return (int) ((time_diff * 100) / shift);
+}
+
+/**
+* @brief
+*	This function creates a timer.
+* @param  expire_ms - The time period in ms after which the timer will fire.
+* @param *user_ptr - A pointer to pass to the timer handler
+* @param *t - A pointer to a pointer where we need to store the timer
+* @return
+* - 0 == SUCCESS
+* - -1 = FAILURE
+*/
+int phys::make_timer(long expire_ms, void *user_ptr, reset_func reset)
+{
+	struct sigevent         te;
+	struct itimerspec       its;
+	struct sigaction        sa;
+	int                     sig_no = SIGRTMIN;
+
+
+	// Set up signal handler
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = reset;
+	sigemptyset(&sa.sa_mask);
+	if (sigaction(sig_no, &sa, NULL) == -1) {
+		ERR("Failed to setup signal handling for timer.\n");
+		return -1;
+	}
+
+	// Set and enable alarm
+	te.sigev_notify = SIGEV_SIGNAL;
+	te.sigev_signo = sig_no;
+	te.sigev_value.sival_ptr = user_ptr;
+	timer_create(CLOCK_REALTIME, &te, &timer_id);
+
+	its.it_interval.tv_sec = 0;
+	its.it_interval.tv_nsec = TV_NSEC(expire_ms);
+	its.it_value.tv_sec = TV_SEC(expire_ms);
+	its.it_value.tv_nsec = TV_NSEC(expire_ms);
+	timer_settime(timer_id, 0, &its, NULL);
+
+	return 0;
+}
 
 /**
 * @brief
@@ -93,6 +134,102 @@ int open_device()
 void close_device()
 {
 	close(g_dev_fd);
+}
+
+int find_enabled_phys()
+{
+	int i, j, val, ddi_select;
+	reg trans_ddi_func_ctl[] = {
+		REG(TRANS_DDI_FUNC_CTL_A),
+		REG(TRANS_DDI_FUNC_CTL_B),
+		REG(TRANS_DDI_FUNC_CTL_C),
+		REG(TRANS_DDI_FUNC_CTL_D),
+	};
+	phys *new_phy;
+
+	// According to the BSpec:
+	// 0000b	None
+	// 0001b	DDI A
+	// 0010b	DDI B
+	// 0011b	DDI C
+	// 0100b	DDI USBC1
+	// 0101b	DDI USBC2
+	// 0110b	DDI USBC3
+	// 0111b	DDI USBC4
+	// 1000b	DDI USBC5
+	// 1001b	DDI USBC6
+	// 1000b	DDI D
+	// 1001b	DDI E
+	// DISPLAY_CCU / DPCLKA Clock	DE Internal Clock
+	// DDIA_DE_CLK	                DDIA
+	// DDIB_DE_CLK	                USBC1
+	// DDII_DE_CLK	                USBC2
+	// DDIJ_DE_CLK	                USBC3
+	// DDIK_DE_CLK	                USBC4
+
+	phy_enabled_list = new list<phys *>;
+
+	for(i = 0; i < ARRAY_SIZE(trans_ddi_func_ctl); i++) {
+		// First read the TRANS_DDI_FUNC_CTL to find if this pipe is enabled or not
+		val = READ_OFFSET_DWORD(trans_ddi_func_ctl[i].addr);
+		DBG("0x%X = 0x%X\n", trans_ddi_func_ctl[i].addr, val);
+		if(!(val & BIT(31))) {
+			DBG("Pipe %d is turned off\n", i+1);
+			continue;
+		}
+
+		// TRANS_DDI_FUNC_CTL bits 30:27 have the DDI which this pipe is connected to
+		ddi_select = GETBITS_VAL(val, 30, 27);
+		DBG("ddi_select = 0x%X\n", ddi_select);
+		for(j = 0; j < platform_table[supported_platform].ds_size; j++) {
+			// Match the DDI with the available ones on this platform
+			if(platform_table[supported_platform].ds[j].de_clk == ddi_select) {
+				switch(platform_table[supported_platform].ds[j].phy) {
+					case DKL:
+						DBG("Detected a DKL phy on pipe %d\n", i+1);
+						new_phy = new dkl(&platform_table[supported_platform].ds[j],
+							platform_table[supported_platform].first_dkl_phy_loc);
+					break;
+					case COMBO:
+						DBG("Detected a Combo phy on pipe %d\n", i+1);
+						new_phy = new combo(&platform_table[supported_platform].ds[j]);
+					break;
+					default:
+						ERR("Unsupported PHY. Phy is %d\n", platform_table[supported_platform].ds[j].phy);
+						return 1;
+					break;
+				}
+				if(!new_phy->is_init()) {
+					ERR("PHY not initialized properly\n");
+					delete new_phy;
+					return 1;
+				}
+				phy_enabled_list->push_back(new_phy);
+
+				// No point trying to find the same ddi if we have already found it once
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+/**
+* @brief
+* This function deallocates all members of the phy_enabled_list
+* @param None
+* @return void
+*/
+void cleanup_phy_list()
+{
+	if(phy_enabled_list) {
+		for(list<phys *>::iterator it = phy_enabled_list->begin();
+		it != phy_enabled_list->end(); it++) {
+			delete *it;
+		}
+		delete phy_enabled_list;
+		phy_enabled_list = NULL;
+	}
 }
 
 /**
@@ -134,6 +271,12 @@ int vsync_lib_init()
 		if(map_mmio()) {
 			return 1;
 		}
+
+		if(find_enabled_phys()) {
+			vsync_lib_uninit();
+			return 1;
+		}
+
 		INIT();
 	}
 
@@ -150,33 +293,9 @@ int vsync_lib_init()
 */
 void vsync_lib_uninit()
 {
+	cleanup_phy_list();
 	close_mmio_handle();
 	UNINIT();
-}
-
-/**
-* @brief
-* This function finds enabled phys, synchronizes them and
-* waits for the sync to finish
-* @param type - Whether it is a DKL or a Combo phy
-* @param time_diff - This is the time difference in between the primary and the
-* secondary systems in ms. If master is ahead of the slave, then the time
-* difference is a positive number otherwise negative.
-* @return void
-*/
-void synchronize_phys(int type, double time_diff)
-{
-	/* First, find all the enabled phys */
-	if(!phy[type].find()) {
-		DBG("No %s PHYs found\n", phy[type].name);
-		return;
-	}
-
-	/* Program the phys that were found with new values */
-	phy[type].program(time_diff, &phy[type].timer_id);
-
-	/* Finally, wait to write back the original values */
-	phy[type].wait_until_done(phy[type].timer_id);
 }
 
 /**
@@ -199,8 +318,14 @@ void synchronize_vsync(double time_diff)
 		return;
 	}
 
-	for(int i = DKL; i < TOTAL_PHYS; i++) {
-		synchronize_phys(i, time_diff);
+	if(phy_enabled_list) {
+		for(list<phys *>::iterator it = phy_enabled_list->begin();
+			it != phy_enabled_list->end(); it++) {
+				// Program the phy
+				(*it)->program_phy(time_diff);
+				// Wait until it is done before moving on to the next phy
+				(*it)->wait_until_done();
+			}
 	}
 }
 

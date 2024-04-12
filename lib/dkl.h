@@ -53,12 +53,18 @@ typedef struct _dkl_phy_reg {
 	int done;
 } dkl_phy_reg;
 
-extern dkl_phy_reg dkl_table[];
+class dkl : public phys {
+public:
+	dkl(ddi_sel *ds, int first_dkl_phy_loc);
+	~dkl() {};
 
-int find_enabled_dkl_phys();
-void program_dkl_phys(double time_diff, timer_t *t);
-void wait_until_dkl_done(timer_t t);
-void program_dkl_mmio(dkl_phy_reg *pr, int mod);
-void reset_dkl(int sig, siginfo_t *si, void *uc);
+	void program_mmio(dkl_phy_reg *pr, int mod);
+	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
+
+	void program_phy(double time_diff);
+	void wait_until_done();
+};
+
+extern dkl_phy_reg dkl_table[];
 
 #endif

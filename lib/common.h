@@ -72,11 +72,11 @@ typedef struct _reg {
 
 class user_info {
 	private:
-	int phy_type;
 	void *phy_reg;
+	void *phy_type;
 	public:
-	user_info(int t, void *r) { phy_type = t; phy_reg = r; }
-	int get_type() { return phy_type; }
+	user_info(void *t, void *r) { phy_type = t; phy_reg = r; }
+	void *get_type() { return phy_type; }
 	void *get_reg() { return phy_reg; }
 };
 
@@ -87,42 +87,54 @@ typedef struct _vbl_info {
 	int pipe;
 } vbl_info;
 
-typedef int  (*find_func)();
-typedef void (*program_func)(double time_diff, timer_t *t);
-typedef void (*wait_func)(timer_t t);
 typedef void (*reset_func)(int sig, siginfo_t *si, void *uc);
 
-typedef struct _phy_funcs {
-	char name[20];
-	void *table;
-	find_func find;
-	program_func program;
-	wait_func wait_until_done;
-	timer_t timer_id;
-} phy_funcs;
 
 typedef struct _ddi_sel {
 	char de_clk_name[20];
+	int phy;
 	int de_clk;
 	reg dpclk;
 	int clock_bit;
 	int mux_select_low_bit;
 	int dpll_num;
+	void *phy_data;
 } ddi_sel;
+
+class phys {
+private:
+	bool init;
+	timer_t timer_id;
+	ddi_sel *m_ds;
+
+public:
+	phys() { init = false; timer_id = 0; m_ds = NULL; }
+	virtual ~phys() { };
+	bool is_init() { return init; };
+	void set_init(bool i) { init = i; };
+	int make_timer(long expire_ms, void *user_ptr, reset_func reset);
+	timer_t get_timer() { return timer_id; }
+	void set_ds(ddi_sel *ds) { m_ds = ds; }
+	ddi_sel *get_ds() { return m_ds; }
+	int calc_steps_to_sync(double time_diff, double shift);
+
+	virtual void program_phy(double time_diff) = 0;
+	virtual void wait_until_done() = 0;
+};
 
 typedef struct _platform {
 	char name[20];
 	int device_ids[MAX_DEVICE_ID];
 	ddi_sel *ds;
 	int ds_size;
+	int first_dkl_phy_loc;
 } platform;
 
 extern platform platform_table[];
 extern int supported_platform;
 
-int calc_steps_to_sync(double time_diff, double shift);
 void timer_handler(int sig, siginfo_t *si, void *uc);
-int make_timer(long expire_ms, void *user_ptr, timer_t *t, reset_func reset);
 unsigned int pipe_to_wait_for(int pipe);
+void cleanup_phy_list();
 
 #endif

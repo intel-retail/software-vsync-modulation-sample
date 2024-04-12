@@ -58,7 +58,7 @@
 										   _ADL_COMBOPHY_E)
 #define _ICL_PORT_COMP_DW(dw, phy)    (_ICL_COMBOPHY(phy) + _ICL_PORT_COMP + 4 * (dw))
 #define ICL_PORT_COMP_DW0(phy)        _ICL_PORT_COMP_DW(0, phy)
-#define READ_VAL(r, v)                combo_table[i].r.v = READ_OFFSET_DWORD(combo_table[i].r.addr);
+#define READ_VAL(r, v)                combo_phy->r.v = READ_OFFSET_DWORD(combo_phy->r.addr);
 
 typedef struct _combo_phy_reg {
 	reg cfgcr0;
@@ -72,13 +72,18 @@ typedef struct _div_val {
 	int val;
 } div_val;
 
-extern combo_phy_reg combo_table[];
+class combo : public phys {
+public:
+	combo(ddi_sel *ds);
+	~combo() {};
 
-int find_enabled_combo_phys();
-void program_combo_phys(double time_diff, timer_t *t);
-void wait_until_combo_done(timer_t t);
-void program_combo_mmio(combo_phy_reg *pr, int mod);
-void reset_combo(int sig, siginfo_t *si, void *uc);
-void cleanup_list();
+	void program_mmio(combo_phy_reg *pr, int mod);
+	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
+
+	void program_phy(double time_diff);
+	void wait_until_done();
+};
+
+extern combo_phy_reg combo_table[];
 
 #endif
