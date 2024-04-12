@@ -24,7 +24,7 @@ pipeline {
 			    apt update && apt -qq install -y libdrm-dev libpciaccess-dev build-essential
 			    make release
 			    mkdir -p binaries
-			    mv release/* ${BDBA_BIN_DIR}/
+			    mv output/release/* ${BDBA_BIN_DIR}/
 			    '''
 			}
 		    }
@@ -54,7 +54,8 @@ pipeline {
     }
     post {
         always {
-            jcpSummaryReport()
+            jcpSummaryReport(publishArtifacts: true)
+            intelLogstashSend failBuild: false, verbose: true
         }
     }
 }
