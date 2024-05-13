@@ -44,6 +44,11 @@ using namespace std;
 #define GETBITS_VAL(val, h, l)       ((val & GENMASK(h, l)) >> l)
 #define _PICK_EVEN(__index, __a, __b) ((__a) + (__index) * ((__b) - (__a)))
 #define _PICK(__index, ...)           (((const uint32_t []){ __VA_ARGS__ })[__index])
+/*
+ * td - The time difference in between the two systems in ms.
+ * s  - The percentage shift that we need to make in our vsyncs.
+ */
+#define CALC_STEPS_TO_SYNC(td, s)     ((int) ((td * 100) / s))
 #define MAX_DEVICE_ID                 20
 /* Per-pipe DDI Function Control */
 #define TRANS_DDI_FUNC_CTL_A          0x60400
@@ -116,7 +121,6 @@ public:
 	timer_t get_timer() { return timer_id; }
 	void set_ds(ddi_sel *ds) { m_ds = ds; }
 	ddi_sel *get_ds() { return m_ds; }
-	int calc_steps_to_sync(double time_diff, double shift);
 
 	virtual void program_phy(double time_diff) = 0;
 	virtual void wait_until_done() = 0;

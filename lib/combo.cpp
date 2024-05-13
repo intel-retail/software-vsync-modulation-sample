@@ -142,7 +142,7 @@ void combo::program_phy(double time_diff)
 	// For whichever PHY we find, let's set the done flag to 0 so that we can later
 	// have a timer for it to reset the default values back in their registers
 	combo_phy->done = 0;
-	int steps = calc_steps_to_sync(time_diff, shift);
+	int steps = CALC_STEPS_TO_SYNC(time_diff, shift);
 	DBG("steps are %d\n", steps);
 	user_info *ui = new user_info(this, combo_phy);
 	make_timer((long) steps, ui, reset_phy_regs);

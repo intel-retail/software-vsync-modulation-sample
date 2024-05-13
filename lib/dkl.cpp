@@ -117,7 +117,7 @@ void dkl::program_phy(double time_diff)
 	if(time_diff < 0) {
 		shift *= -1;
 	}
-	int steps = calc_steps_to_sync(time_diff, shift);
+	int steps = CALC_STEPS_TO_SYNC(time_diff, shift);
 	DBG("steps are %d\n", steps);
 	user_info *ui = new user_info(this, dkl_phy);
 	make_timer((long) steps, ui, reset_phy_regs);

@@ -56,22 +56,6 @@ list<phys *> *phy_enabled_list = NULL;
 
 /**
 * @brief
-* This function calculates how many steps we need to take
-* in order to synchronize the primary and secondary systems given the delta
-* between primary and secondary and the shift that we need to make in terms of
-* percentage. Each steps is a single vsync period (typically 16.666 ms).
-* @param time_diff - The time difference in between the two systems in ms.
-* @param shift - The percentage shift that we need to make in our vsyncs.
-* @return int
-*/
-
-int phys::calc_steps_to_sync(double time_diff, double shift)
-{
-	return (int) ((time_diff * 100) / shift);
-}
-
-/**
-* @brief
 *	This function creates a timer.
 * @param  expire_ms - The time period in ms after which the timer will fire.
 * @param *user_ptr - A pointer to pass to the timer handler
