@@ -109,18 +109,21 @@ typedef struct _ddi_sel {
 class phys {
 private:
 	bool init;
+	int pipe;
 	timer_t timer_id;
 	ddi_sel *m_ds;
 
 public:
 	phys() { init = false; timer_id = 0; m_ds = NULL; }
-	virtual ~phys() { };
-	bool is_init() { return init; };
-	void set_init(bool i) { init = i; };
-	int make_timer(long expire_ms, void *user_ptr, reset_func reset);
+	virtual ~phys() { }
+	bool is_init() { return init; }
+	void set_init(bool i) { init = i; }
+	int get_pipe() { return pipe; }
+	void set_pipe(int p) { pipe = p; }
 	timer_t get_timer() { return timer_id; }
 	void set_ds(ddi_sel *ds) { m_ds = ds; }
 	ddi_sel *get_ds() { return m_ds; }
+	int make_timer(long expire_ms, void *user_ptr, reset_func reset);
 
 	virtual void program_phy(double time_diff) = 0;
 	virtual void wait_until_done() = 0;

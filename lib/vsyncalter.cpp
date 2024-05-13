@@ -188,6 +188,7 @@ int find_enabled_phys()
 					delete new_phy;
 					return 1;
 				}
+				new_phy->set_pipe(i);
 				phy_enabled_list->push_back(new_phy);
 
 				// No point trying to find the same ddi if we have already found it once
@@ -293,9 +294,12 @@ void vsync_lib_uninit()
 * @param time_diff - This is the time difference in between the primary and the
 * secondary systems in ms. If master is ahead of the slave , then the time
 * difference is a positive number otherwise negative.
+* @param pipe - This is the 0 based pipe number to synchronize vsyncs for. Note
+* that this variable is optional. So if the caller doesn't provide it or provides
+* ALL_PIPES as the value, then all pipes will be synchronized.
 * @return void
 */
-void synchronize_vsync(double time_diff)
+void synchronize_vsync(double time_diff, int pipe)
 {
 	if(!IS_INIT()) {
 		ERR("Uninitialized lib, please call lib init first\n");
@@ -305,10 +309,12 @@ void synchronize_vsync(double time_diff)
 	if(phy_enabled_list) {
 		for(list<phys *>::iterator it = phy_enabled_list->begin();
 			it != phy_enabled_list->end(); it++) {
-				// Program the phy
-				(*it)->program_phy(time_diff);
-				// Wait until it is done before moving on to the next phy
-				(*it)->wait_until_done();
+				if(pipe == ALL_PIPES || pipe == (*it)->get_pipe()) {
+					// Program the phy
+					(*it)->program_phy(time_diff);
+					// Wait until it is done before moving on to the next phy
+					(*it)->wait_until_done();
+				}
 			}
 	}
 }

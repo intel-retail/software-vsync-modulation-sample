@@ -27,10 +27,11 @@
 
 #define ONE_VSYNC_PERIOD_IN_MS        16.666
 #define MAX_TIMESTAMPS                100
+#define ALL_PIPES                     4
 
 int vsync_lib_init();
 void vsync_lib_uninit();
-void synchronize_vsync(double time_diff);
+void synchronize_vsync(double time_diff, int pipe = ALL_PIPES);
 int get_vsync(long *vsync_array, int size, int pipe = 0);
 
 #endif
