@@ -44,15 +44,14 @@
 #include "i915_pciids.h"
 
 platform platform_table[] = {
-	{"TGL",   INTEL_TGL_IDS,  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel), 4},
-	{"ADL_S", INTEL_ADLS_IDS, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
-	{"ADL_P", INTEL_ADLP_IDS, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
+	{"TGL",   {INTEL_TGL_IDS},  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel), 4},
+	{"ADL_S_FAM", {INTEL_ADLS_FAM_IDS}, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
+	{"ADL_P_FAM", {INTEL_ADLP_FAM_IDS}, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
 };
 
 int g_dev_fd = 0;
 int supported_platform = 0;
 list<phys *> *phy_enabled_list = NULL;
-
 
 /**
 * @brief

@@ -49,7 +49,7 @@ using namespace std;
  * s  - The percentage shift that we need to make in our vsyncs.
  */
 #define CALC_STEPS_TO_SYNC(td, s)     ((int) ((td * 100) / s))
-#define MAX_DEVICE_ID                 20
+#define MAX_DEVICE_ID                 30
 /* Per-pipe DDI Function Control */
 #define TRANS_DDI_FUNC_CTL_A          0x60400
 #define TRANS_DDI_FUNC_CTL_B          0x61400
