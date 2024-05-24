@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <cerrno>
 #include "mmio.h"
 #include <debug.h>
 
@@ -275,6 +276,8 @@ void close_mmio_handle()
 {
 	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
 	pci_system_cleanup();
-	close(g_fd);
+	if (close(g_fd) == -1) {
+		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+	}
 }
 

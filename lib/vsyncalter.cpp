@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <cerrno>
 #include <vsyncalter.h>
 #include <debug.h>
 #include <stdlib.h>
@@ -116,7 +117,9 @@ int open_device()
 */
 void close_device()
 {
-	close(g_dev_fd);
+	if(close(g_dev_fd) == -1){
+		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+	}
 }
 
 int find_enabled_phys()
