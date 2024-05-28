@@ -1,20 +1,53 @@
-This program allows two systems to synchronize their vertical sync firing times.
+ Copyright (C) 2023 Intel Corporation
+ SPDX-License-Identifier: MIT
 
-Generating Doxygen documents:<br>
+This program allows a system to alter their vertical sync firing times.
+This is sample code only and is only supported on 11th Gen Core. Please note that this document was written based on Ubuntu
+
+# Prerequisites
+The build system assumes the following, prior to executing the build steps:
+1) The system has an [Ubuntu OS](https://ubuntu.com/tutorials/install-ubuntu-desktop#1-overview)
+1) Libraries installed: `sudo apt install -y git build-essential make`
+1) [Disable secure boot](https://wiki.ubuntu.com/UEFI/SecureBoot/DKMS)
+
+# Building steps:
+1) Git clone this repository 
+1) `sudo apt install libdrm-dev libpciaccess-dev`
+    1) If the directory /usr/include/drm does not exist, you may need to also add `sudo apt install -y linux-libc-dev`
+1) Type `make release` from the main directory. It compiles everything and creates a 
+   release folder which can then be copied to the target systems.
+
+# Notes
+* By default this is set to move vsync by 1.0 ms. in [synctest/synctest.cpp](./synctest/synctest.cpp)
+* If experiencing screen flicker, adjust the SHIFT value in [lib/common.h](./lib/common.h)
+
+# Helpful libraries to have installed
+If you are doing debug, it helps to have the following libraries installed:
+```
+apt install -y intel-gpu-tools edid-decode
+```
+
+# Generating Doxygen documents
+
 Please install doxygen and graphviz packages before generating Doxygen documents:
 	```sudo apt install doxygen graphviz```
 1. Type ```make doxygen``` from the main directory. It will genarte SW Genlock doxygen documents
 	to output/doxygen folder.
 2. Open output/doxygen/html/index.html with a web-browser
 
-Building steps:<br>
-1. Type ```make release``` from the main directory. It compiles everything and creates a 
-   output/release folder which can then be copied to the target systems.
+# Build Steps
+1) On the system, go to the directory where these files exist and set environment variable:
+```console
+export LD_LIBRARY_PATH=`pwd`/lib
+``````
+2) On the primary system, run it as follows:
+	```console
+   ./synctest 
+   ```
 
 Building of this program has been successfully tested on both Ubuntu 2x and Fedora 30.<br>
-Please note that this document was written based on Ubuntu
 
-Preparing two systems for PTP communication:<br>
+## Preparing two systems for PTP communication
 In order to prepare two systems, please follow these steps:<br>
 1. There should be a network cable directly connecting the ethernet ports of the two
 systems.
