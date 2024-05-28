@@ -31,6 +31,7 @@
 #include <string.h>
 #include <errno.h>
 #include <cerrno>
+#include <mutex>
 #include "mmio.h"
 #include <debug.h>
 
@@ -59,6 +60,7 @@ unsigned long crcinit_direct;
 unsigned long crcinit_nondirect;
 unsigned long crctab[256];
 struct pci_device *pci_dev = NULL;
+std::mutex map_mutex; // Global mutex to protect map_cmn
 
 /**
 * @brief
@@ -189,6 +191,8 @@ int map_mmio()
 */
 int map_cmn(int base_index, int size)
 {
+	std::lock_guard<std::mutex> lock(map_mutex); // Lock the mutex for the scope of the function
+
 	int found = 0;
 	loff_t base;
 	int ret_val = 1;
