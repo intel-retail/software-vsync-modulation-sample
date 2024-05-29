@@ -1,0 +1,92 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: MIT
+name: Deploy Doxygen Documentation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      versionTag:
+        description: 'Version tag (leave empty to use the most recent tag)'
+        required: false
+        default: ''
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history for all tags and branches
+
+      - name: Determine Version Tag
+        run: |
+          if [[ -z "${{ github.event.inputs.versionTag }}" ]]; then
+            echo "No version tag provided, determining the most recent tag..."
+            LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+            echo "Most recent tag is ${LATEST_TAG}"
+            echo "VERSION=${LATEST_TAG}" >> $GITHUB_ENV
+          else
+            echo "Using provided version tag ${{ github.event.inputs.versionTag }}"
+            echo "VERSION=${{ github.event.inputs.versionTag }}" >> $GITHUB_ENV
+          fi
+
+      - name: Install Doxygen and Graphviz
+        run: sudo apt-get install -y doxygen graphviz build-essential
+
+      - name: Build and Deploy Documentation
+        run: |
+          # Configure git with the name and email of the GitHub Actions bot
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Build the Doxygen versioned documentation
+          make doxygen VERSION="${{ env.VERSION }}"
+
+          # Create a separate directory for the gh-pages branch
+          mkdir gh-pages
+          cd gh-pages
+
+          # Initialize a new git repository and fetch the gh-pages branch
+          git init
+          # Use the GitHub repository context to set the remote URL
+          git remote add origin https://github.com/${{ github.repository }}.git
+
+          # Authenticate using the GITHUB_TOKEN
+          git config http.version HTTP/1.1
+          git config http.https://github.com/.extraheader "AUTHORIZATION: basic $(echo -n x-access-token:${{ secrets.GITHUB_TOKEN }} | base64 --wrap=0)"
+
+          # Fetch and checkout the gh-pages branch
+          git fetch origin gh-pages
+          git checkout -b gh-pages origin/gh-pages
+
+          # Copy the generated documentation to the gh-pages directory
+          VERSION=${{ env.VERSION }}
+          FOLDER_NAME="docs/$VERSION"
+          mkdir -p $FOLDER_NAME
+          cp -r ../output/doxygen/html/* $FOLDER_NAME
+
+          # Create or update the 'latest' symlink to point to the new version
+          cd docs
+          ln -sfn $VERSION latest
+          cd ..
+
+          # Generate index.html with links to each version
+          echo "<html><body><h1>Documentation Versions</h1><ul>" > docs/index.html
+          for dir in docs/v*; do
+            version=$(basename $dir)
+            echo "<li><a href='$version/index.html'>$version</a></li>" >> docs/index.html
+          done
+          echo "<li><a href='latest/index.html'>latest</a></li>" >> docs/index.html
+          echo "</ul></body></html>" >> docs/index.html
+
+          # Add and commit changes
+          git add -A
+          git commit -m "Deploy Doxygen documentation for version $VERSION"
+
+          # Push changes to gh-pages using the GITHUB_TOKEN for authentication
+          git push --force origin gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

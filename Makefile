@@ -20,7 +20,7 @@ debug:
 
 doxygen:
 	@mkdir -p output/doxygen
-	@doxygen -DPROJECT_NUMBER="$(VERSION)" resources/swgen_doxy
+	@( cat resources/swgen_doxy ; echo "PROJECT_NUMBER=$(VERSION)" ) | doxygen -
 clean:
 	@for dir in $(DIRS); do \
 		$(MAKE) -C $$dir clean; \
