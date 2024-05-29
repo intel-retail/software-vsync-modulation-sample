@@ -41,7 +41,11 @@ enum {
 * 2 = Errors + Info messages + Debug messages
 * 3 = Errors + Info messages + Debug messages + Trace calls
 */
+#ifdef DEBUGON
+static int dbg_lvl = DBG;
+#else
 static int dbg_lvl = INFO;
+#endif
 
 #define _PRINT(prefix, fmt, ...)  \
 	if(1) {\

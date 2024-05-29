@@ -34,7 +34,7 @@ $(BINNAME): $(OBJECTS)
 	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(LFLAGS) $(INCLUDES) $< 
 
 debug:
-	@export DBG_FLAGS='-g'; \
+	@export DBG_FLAGS='-g -D DEBUGON'; \
 	$(MAKE)
 
 clean:
