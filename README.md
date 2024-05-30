@@ -99,7 +99,7 @@ narrowing the potential problem.
 Provides tools to read and write to registers, it must be run as the root user. Example:
 
 ```console
-intel_reg_dump --all > /tmp/reg_dump.txt
+intel_reg dump --all > /tmp/reg_dump.txt
 
 # output excerpt
                     GEN6_RP_CONTROL (0x0000a024): 0x00000400
