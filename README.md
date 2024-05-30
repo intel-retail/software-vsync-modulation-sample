@@ -19,12 +19,170 @@ The build system assumes the following, prior to executing the build steps:
 
 # Notes
 * By default this is set to move vsync by 1.0 ms. in [synctest/synctest.cpp](./synctest/synctest.cpp)
-* If experiencing screen flicker, adjust the SHIFT value in [lib/common.h](./lib/common.h)
 
-# Helpful libraries to have installed
+# Debug
+You can turn on debug printing automatically by building with `make debug`
+There is a dbg_lvl flag which can be set to INFO, DBG, ERR etc.
+
+**sample output:**
+```console
+./synctest
+
+[DBG] Device id is 0xA780
+[DBG] 0x60400 = 0xA0030011
+[DBG] ddi_select = 0x4
+[DBG] Detected a Combo phy on pipe 1
+[DBG] 0x164280 = 0xE07410
+[DBG] DPLL num = 0x0
+[DBG] 0x61400 = 0xAA110006
+[DBG] ddi_select = 0x5
+[DBG] Detected a Combo phy on pipe 2
+[DBG] 0x164280 = 0xE07410
+[DBG] DPLL num = 0x1
+[DBG] 0x62400 = 0x0
+[DBG] Pipe 3 is turned off
+[DBG] 0x63400 = 0x0
+[DBG] Pipe 4 is turned off
+[DBG] steps are 1000
+[DBG] OLD VALUES
+ cfgcr0 [0x164284] =	 0x1001D0
+ cfgcr1 [0x164288] =	 0x448
+[DBG] old pll_freq 	 594.000000
+[DBG] new_pll_freq 	 594.594000
+[DBG] old dco_clock 	 8910.000000
+[DBG] new dco_clock 	 8918.910000
+[DBG] old fbdivfrac 	 0x400
+[DBG] old ro_div_frac 	 0x8000
+[DBG] old fbdivint 	 0x1D0
+[DBG] old ro_div_int 	 0x3A
+[DBG] new fbdivfrac 	 0x21B3
+[DBG] new ro_div_frac 	 0x43666
+[DBG] NEW VALUES
+ cfgcr0 [0x164284] =	 0x86CDD0
+[DBG] timer done
+[DBG] DEFAULT VALUES
+ cfgcr0 [0x164284] =	 0x1001D0
+ cfgcr1 [0x164288] =	 0x448
+[DBG] steps are 1000
+[DBG] OLD VALUES
+ cfgcr0 [0x16428C] =	 0xE001A5
+ cfgcr1 [0x164290] =	 0x48
+[DBG] old pll_freq 	 540.000000
+[DBG] new_pll_freq 	 540.540000
+[DBG] old dco_clock 	 8100.000000
+[DBG] new dco_clock 	 8108.100000
+[DBG] old fbdivfrac 	 0x3800
+[DBG] old ro_div_frac 	 0x2F0000
+[DBG] old fbdivint 	 0x1A6
+[DBG] old ro_div_int 	 0x34
+[DBG] new fbdivfrac 	 0x11300
+[DBG] new ro_div_frac 	 0x226001
+[DBG] NEW VALUES
+ cfgcr0 [0x16428C] =	 0x44C01A6
+[DBG] timer done
+[DBG] DEFAULT VALUES
+ cfgcr0 [0x16428C] =	 0xE001A5
+ cfgcr1 [0x164290] =	 0x48
+```
+
+## Debug Tools
 If you are doing debug, it helps to have the following libraries installed:
 ```
 apt install -y intel-gpu-tools edid-decode
+```
+
+### Debug Tool Usage
+If you are encountering unexpected behavior that requires additional debug, the tools installed can assist with 
+narrowing the potential problem.
+
+**[intel-gpu-tools](https://cgit.freedesktop.org/xorg/app/intel-gpu-tools/)**
+Provides tools to read and write to registers, it must be run as the root user. Example:
+
+```console
+intel_reg_dump --all > /tmp/reg_dump.txt
+
+# output excerpt
+                    GEN6_RP_CONTROL (0x0000a024): 0x00000400
+Gen6	disabled
+                      GEN6_RPNSWREQ (0x0000a008): 0x150a8000
+               GEN6_RP_DOWN_TIMEOUT (0x0000a010): 0x00000000
+           GEN6_RP_INTERRUPT_LIMITS (0x0000a014): 0x00000000
+               GEN6_RP_UP_THRESHOLD (0x0000a02c): 0x00000000
+                      GEN6_RP_UP_EI (0x0000a068): 0x00000000
+                    GEN6_RP_DOWN_EI (0x0000a06c): 0x00000000
+             GEN6_RP_IDLE_HYSTERSIS (0x0000a070): 0x00000000
+                      GEN6_RC_STATE (0x0000a094): 0x00040000
+                    GEN6_RC_CONTROL (0x0000a090): 0x00040000
+           GEN6_RC1_WAKE_RATE_LIMIT (0x0000a098): 0x00000000
+           GEN6_RC6_WAKE_RATE_LIMIT (0x0000a09c): 0x00000000
+        GEN6_RC_EVALUATION_INTERVAL (0x0000a0a8): 0x00000000
+             GEN6_RC_IDLE_HYSTERSIS (0x0000a0ac): 0x00000019
+                      GEN6_RC_SLEEP (0x0000a0b0): 0x00000000
+                GEN6_RC1e_THRESHOLD (0x0000a0b4): 0x00000000
+                 GEN6_RC6_THRESHOLD (0x0000a0b8): 0x00000000
+...
+
+intel_reg read 0x00062400
+                PIPE_DDI_FUNC_CTL_C (0x00062400): 0x00000000 (disabled, no port, HDMI, 8 bpc, -VSync, -HSync, EDP A ON, x1)
+```
+
+**[edid-decode](https://manpages.debian.org/unstable/edid-decode/edid-decode.1.en.html)**
+is a tool used to parse the Extended Display Identification Data (EDID) from monitors and display devices. EDID contains metadata about the display's capabilities, such as supported resolutions, manufacturer, serial number, and other attributes.
+
+To run edid-decode, you typically need to provide it with a binary EDID file or data. Sample usage:
+```console
+cat /sys/class/drm/card0-HDMI-A-1/edid > edid.bin
+
+# run edid-decode to parse and display the information
+edid-decode edid.bin
+
+# sample output
+Extracted contents:
+header:          00 ff ff ff ff ff ff 00
+serial number:   10 ac 64 a4 4c 30 30 32
+version:         01 03
+basic params:    80 34 20 78 2e
+chroma info:     c5 c4 a3 57 4a 9c 25 12 50 54
+established:     bf ef 80
+standard:        71 4f 81 00 81 40 81 80 95 00 a9 40 b3 00 01 01
+descriptor 1:    4d d0 00 a0 f8 70 3e 80 30 20 35 00 55 50 21 00 00 1a
+descriptor 2:    02 3a 80 18 71 38 2d 40 58 2c 45 00 55 50 21 00 00 1e
+descriptor 3:    00 00 00 ff 00 43 32 30 30 38 30 4e 50 30 0a 20 20 20
+descriptor 4:    00 00 00 fd 00 32 4b 1e 53 11 00 0a 20 20 20 20 20 20
+extensions:      01
+checksum:        1c
+
+Manufacturer: DEL Model a464 Serial Number 808909324
+Made week 12 of 2008
+EDID version: 1.3
+Digital display
+Maximum image size: 52 cm x 32 cm
+Gamma: 2.20
+DPMS levels: Standby Suspend Off
+RGB color display
+First detailed timing is preferred timing
+Display x,y Chromaticity:
+  Red:   0.6396, 0.3300
+  Green: 0.2998, 0.5996
+  Blue:  0.1503, 0.0595
+  White: 0.3134, 0.3291
+Established timings supported:
+  720x400@70Hz
+  640x480@60Hz
+  640x480@67Hz
+  640x480@72Hz
+  640x480@75Hz
+  800x600@56Hz
+  800x600@60Hz
+  ...
+Standard timings supported:
+  1152x864@75Hz
+  1280x800@60Hz
+  1280x960@60Hz
+  ...
+Detailed mode: Clock 148.500 MHz, 509 mm x 286 mm
+               1920 2008 2052 2200 hborder 0
+               1080 1084 1089 
 ```
 
 # Generating Doxygen documents
