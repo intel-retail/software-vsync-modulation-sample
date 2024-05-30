@@ -189,8 +189,8 @@ Detailed mode: Clock 148.500 MHz, 509 mm x 286 mm
 
 Please install doxygen and graphviz packages before generating Doxygen documents:
 	```sudo apt install doxygen graphviz```
-1. Type ```make doxygen``` from the main directory. It will genarte SW Genlock doxygen documents
-	to output/doxygen folder.
+1. Type ```make doxygen VERSION="1.2.3"``` from the main directory. It will generate SW Genlock doxygen documents
+	to output/doxygen folder. Change the version to be that of the release number for the project.
 2. Open output/doxygen/html/index.html with a web-browser
 
 # Build Steps
