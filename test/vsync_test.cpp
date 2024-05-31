@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include "connection.h"
 #include "message.h"
+#include "version.h"
 
 using namespace std;
 
@@ -44,6 +45,7 @@ int client_done = 0;
 */
 void usage()
 {
+	PRINT("Vsynctest Version: %s\n", get_version().c_str());
 	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr] [primary's PTP eth addr] [sync after # us]\n");
 	PRINT("pri = This is the primary system and it needs to share its vsync with others\n");
 	PRINT("sec = This is the secondary system. More than one systems can be secondary.\n");

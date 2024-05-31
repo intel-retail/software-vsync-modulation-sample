@@ -28,6 +28,7 @@
 #include <vsyncalter.h>
 #include <debug.h>
 #include <math.h>
+#include "version.h"
 
 using namespace std;
 
@@ -79,6 +80,8 @@ int main(int argc, char *argv[])
 {
 	int ret = 0, size;
 	long *client_vsync, avg;
+	
+	INFO("Vbltest Version: %s\n", get_version().c_str());
 
 	if(argc != 3) {
 		ERR("Usage: %s <number of vsyncs to get timestamp for> <0 based pipe to get for>\n", argv[0]);

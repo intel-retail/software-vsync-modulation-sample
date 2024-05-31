@@ -22,37 +22,28 @@
  *
  */
 
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-#include <vsyncalter.h>
-#include <debug.h>
-#include <math.h>
-#include "version.h"
+#ifndef _VERSION_H
+#define _VERSION_H
 
-using namespace std;
+#include <string>
+#include <sstream>
+
+#define VERSION_MAJOR 2
+#define VERSION_MINOR 0
+#define VERSION_PATCH 0
 
 /**
-* @brief
-* This is the main function
-* @param argc - The number of command line arguments
-* @param *argv[] - Each command line argument in an array
-* @return
-* - 0 = SUCCESS
-* - 1 = FAILURE
-*/
-int main(int argc, char *argv[])
+ * @brief Constructs a version string from major, minor, and patch numbers.
+ * 
+ * @return A string representing the version in the format "major.minor.patch".
+ */
+static inline std::string get_version() 
 {
-	int ret = 0;
-	INFO("Synctest Version: %s\n", get_version().c_str());
-	
-	if(vsync_lib_init()) {
-		ERR("Couldn't initialize vsync lib\n");
-		return 1;
-	}
-
-	synchronize_vsync(1.0);
-
-	vsync_lib_uninit();
-	return ret;
+    std::ostringstream version_stream;
+    version_stream << VERSION_MAJOR << '.'
+                  << VERSION_MINOR << '.'
+                  << VERSION_PATCH;
+    return version_stream.str();
 }
+
+#endif
