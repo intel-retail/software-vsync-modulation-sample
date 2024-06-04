@@ -9,7 +9,16 @@ The build system assumes the following, prior to executing the build steps:
 1) The system has an [Ubuntu OS](https://ubuntu.com/tutorials/install-ubuntu-desktop#1-overview)
 1) Libraries installed: `sudo apt install -y git build-essential make`
 1) [Disable secure boot](https://wiki.ubuntu.com/UEFI/SecureBoot/DKMS)
-
+1) You MUST apply the [PLL kernel patch](./resources/0001-dpll-Provide-a-command-line-param-to-config-if-PLLs-.patch). 
+    * Following the application of the patch, edit the grub settings:
+	```console
+	sudo vi /etc/grub/default
+	# add i915.share_dplls=0 to the GRUB_CMDLINE_LINUX options: 
+	# GRUB_CMDLINE_LINUX="i915.share_dplls=0"
+	# Save and exit, then update grub
+	update-grub
+	```
+	
 # Building steps:
 1) Git clone this repository 
 1) `sudo apt install libdrm-dev libpciaccess-dev`
