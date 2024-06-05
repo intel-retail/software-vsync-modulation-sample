@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['v2_2e0_2e0_2emd_296',['v2.0.0.md',['../v2_80_80_8md.html',1,'']]],
+  ['val_297',['val',['../combo_8h.html#a16cd9090d31ce9d76e953eb2d2b6a968',1,'div_val']]],
+  ['vbl_5finfo_298',['vbl_info',['../common_8h.html#structvbl__info',1,'']]],
+  ['vblank_5fcount_299',['vblank_count',['../classmsg.html#a327fcb53d152c28e712ee83101982dfd',1,'msg']]],
+  ['vblank_5fhandler_300',['vblank_handler',['../vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8',1,'vsyncalter.cpp']]],
+  ['vbltest_2ecpp_301',['vbltest.cpp',['../vbltest_8cpp.html',1,'']]],
+  ['vendor_5fid_302',['vendor_id',['../mmio_8h.html#afc5089043d1c77d5e814fe8c15b0b8ae',1,'gfx_pci_device']]],
+  ['version_2eh_303',['version.h',['../version_8h.html',1,'']]],
+  ['version_5fmajor_304',['VERSION_MAJOR',['../version_8h.html#a1a53b724b6de666faa8a9e0d06d1055f',1,'version.h']]],
+  ['version_5fminor_305',['VERSION_MINOR',['../version_8h.html#ae0cb52afb79b185b1bf82c7e235f682b',1,'version.h']]],
+  ['version_5fpatch_306',['VERSION_PATCH',['../version_8h.html#a901edadf17488bb6be1ac9a1e3cfea7a',1,'version.h']]],
+  ['vsync_5farray_307',['vsync_array',['../common_8h.html#a6fc0f4f959a3c1c688b278d08cde6458',1,'vbl_info::vsync_array()'],['../classmsg.html#aac51a6119f55095eedf6bd0705dd516e',1,'msg::vsync_array()']]],
+  ['vsync_5flib_5finit_308',['vsync_lib_init',['../vsyncalter_8h.html#a1ccc7c011ad035e21d4367fc5dcb412c',1,'vsync_lib_init():&#160;vsyncalter.cpp'],['../vsyncalter_8cpp.html#a1ccc7c011ad035e21d4367fc5dcb412c',1,'vsync_lib_init():&#160;vsyncalter.cpp']]],
+  ['vsync_5flib_5funinit_309',['vsync_lib_uninit',['../vsyncalter_8h.html#a35dc013212b176f47265e64746fedc0d',1,'vsync_lib_uninit():&#160;vsyncalter.cpp'],['../vsyncalter_8cpp.html#a35dc013212b176f47265e64746fedc0d',1,'vsync_lib_uninit():&#160;vsyncalter.cpp']]],
+  ['vsync_5fmsg_310',['VSYNC_MSG',['../message_8h.html#a9ba985c3eef01c6c3d9228a2de312e20ace39ad9d0772330b0dc3faeeb107c680',1,'message.h']]],
+  ['vsync_5ftest_2ecpp_311',['vsync_test.cpp',['../vsync__test_8cpp.html',1,'']]],
+  ['vsyncalter_2ecpp_312',['vsyncalter.cpp',['../vsyncalter_8cpp.html',1,'']]],
+  ['vsyncalter_2eh_313',['vsyncalter.h',['../vsyncalter_8h.html',1,'']]]
+];

@@ -1,0 +1,65 @@
+var common_8h =
+[
+    [ "reg", "common_8h.html#structreg", [
+      [ "addr", "common_8h.html#ae92c477015619033835be4ec435791a3", null ],
+      [ "orig_val", "common_8h.html#afdfc730ee8d710762caace2e08efd206", null ],
+      [ "mod_val", "common_8h.html#a8de24510c42f5bc482e6979bf6b8eeac", null ]
+    ] ],
+    [ "user_info", "classuser__info.html", "classuser__info" ],
+    [ "vbl_info", "common_8h.html#structvbl__info", [
+      [ "vsync_array", "common_8h.html#a6fc0f4f959a3c1c688b278d08cde6458", null ],
+      [ "size", "common_8h.html#a109ffd9a196b0a6b75c6a3b976f9aeed", null ],
+      [ "counter", "common_8h.html#ae083e6f3e89f410f763117f4143d5f88", null ],
+      [ "pipe", "common_8h.html#a538be122cf24be7d676ec482f61df44b", null ]
+    ] ],
+    [ "ddi_sel", "common_8h.html#structddi__sel", [
+      [ "de_clk_name", "common_8h.html#a2a1b874250dd4a30c9145134130b6877", null ],
+      [ "phy", "common_8h.html#a5bcc101bf32d67055fa5ab591630cd24", null ],
+      [ "de_clk", "common_8h.html#ab7c25019f896c4e799baf741683843d9", null ],
+      [ "dpclk", "common_8h.html#aef584b14d6be835dd6b7c48cb871a954", null ],
+      [ "clock_bit", "common_8h.html#a9fad6b7d85faf7c5c2439c1f341b6af7", null ],
+      [ "mux_select_low_bit", "common_8h.html#a248d8d8e868a55e974519b3fcdef9cdd", null ],
+      [ "dpll_num", "common_8h.html#a78acd278dbc356784670ac8a73293ab9", null ],
+      [ "phy_data", "common_8h.html#ac8d11bdfdeb15653182713df7d23ff22", null ]
+    ] ],
+    [ "phys", "classphys.html", "classphys" ],
+    [ "platform", "common_8h.html#structplatform", [
+      [ "name", "common_8h.html#a0e2d2f0cdb0e040e50be2948f2ccd892", null ],
+      [ "device_ids", "common_8h.html#a2f6dd720414f9abf5c25f9edc403a5e4", null ],
+      [ "ds", "common_8h.html#af05f6fca3edcd697f94a89bb0f679181", null ],
+      [ "ds_size", "common_8h.html#a9d6ad2fd4da3c96ced28778bec2967ef", null ],
+      [ "first_dkl_phy_loc", "common_8h.html#ab1d0f150831b90c9501691f16e936645", null ]
+    ] ],
+    [ "TESTING", "common_8h.html#a68df6a1c0e7634ba32a66f9f01d4cb6f", null ],
+    [ "SHIFT", "common_8h.html#ac179eef68bcc694aa0ef8dd1eb09950b", null ],
+    [ "REF_COMBO_FREQ", "common_8h.html#aa40f3c1157ccf9c5c4a315881a510d89", null ],
+    [ "ONE_SEC_IN_NS", "common_8h.html#a0fa1c44c6e90a565840d831eb7ee8e8b", null ],
+    [ "TV_NSEC", "common_8h.html#afabdd2d52bb2072febfb3a38a597058d", null ],
+    [ "TV_SEC", "common_8h.html#a9dda008b858115a10e3f95902a4df422", null ],
+    [ "TIME_IN_USEC", "common_8h.html#a057f46c4a6def8ab242d3034bc95e188", null ],
+    [ "BIT", "common_8h.html#a4eaf4bf81c52c3f375967906e4d5ba17", null ],
+    [ "ARRAY_SIZE", "common_8h.html#a25f003de16c08a4888b69f619d70f427", null ],
+    [ "BITS_PER_LONG", "common_8h.html#a2f660aa23a5dbc0f4b8df48b4302b8c3", null ],
+    [ "GENMASK", "common_8h.html#a58530d20924859d16358c7400c37738d", null ],
+    [ "GETBITS_VAL", "common_8h.html#a9fe85034e0db4361cb6d8db92471060f", null ],
+    [ "_PICK_EVEN", "common_8h.html#a9f10d31002cc837f3cc25f0ac5d226c3", null ],
+    [ "_PICK", "common_8h.html#ac48e2f5455abfe382082e59427ddfa2e", null ],
+    [ "CALC_STEPS_TO_SYNC", "common_8h.html#abe500bc9c7d7524135c065efb5dc2230", null ],
+    [ "MAX_DEVICE_ID", "common_8h.html#a29b3b6c6789bec2269234bff8d578dff", null ],
+    [ "TRANS_DDI_FUNC_CTL_A", "common_8h.html#ac54f0746a3e3e046de447c91b2e437c2", null ],
+    [ "TRANS_DDI_FUNC_CTL_B", "common_8h.html#a961efc199e1ff7aabb53a1abfb67220a", null ],
+    [ "TRANS_DDI_FUNC_CTL_C", "common_8h.html#a83e181251928c4dbf7b1967927e41d03", null ],
+    [ "TRANS_DDI_FUNC_CTL_D", "common_8h.html#aea3c4ecf8efa1161f445c16149218da9", null ],
+    [ "TRANS_DDI_FUNC_CTL_EDP", "common_8h.html#abf0943d4f9d02fd96408dba444d926d8", null ],
+    [ "TRANS_DDI_FUNC_CTL_DSI0", "common_8h.html#aa420720e749fad8d80d38a73179b8efb", null ],
+    [ "TRANS_DDI_FUNC_CTL_DSI1", "common_8h.html#a494b8fbdb176abe62860237d7a2604bc", null ],
+    [ "DPCLKA_CFGCR0", "common_8h.html#ab20183ca56f53d409e5aa02b7700befc", null ],
+    [ "DPCLKA_CFGCR1", "common_8h.html#a873117d0b4036b1cbfb41f084921d139", null ],
+    [ "REG", "common_8h.html#a72e45020e46f285689db51c46f273403", null ],
+    [ "reset_func", "common_8h.html#aaeb968dca7f3e8abad16ac8872a61076", null ],
+    [ "timer_handler", "common_8h.html#a69a9ecb245422cbf03f28336a3cde462", null ],
+    [ "pipe_to_wait_for", "common_8h.html#aa5b2359b39d48f12b1e5698243aa677c", null ],
+    [ "cleanup_phy_list", "common_8h.html#a6c3688799fc62d197fe8e3b25ba950cf", null ],
+    [ "platform_table", "common_8h.html#a35916f91e4a08b4a6827b0898227c396", null ],
+    [ "supported_platform", "common_8h.html#ad528e611992e8351b42c55c1f9e59bdc", null ]
+];

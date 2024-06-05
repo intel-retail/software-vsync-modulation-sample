@@ -1,0 +1,5 @@
+<map id="vsync_lib_uninit" name="vsync_lib_uninit">
+<area shape="rect" id="node1" title="This function uninitializes the library by closing devices and unmapping memory. It must be called at..." alt="" coords="5,31,132,57"/>
+<area shape="rect" id="node2" href="$vsyncalter_8cpp.html#a6c3688799fc62d197fe8e3b25ba950cf" title="This function deallocates all members of the phy_enabled_list." alt="" coords="191,5,321,32"/>
+<area shape="rect" id="node3" href="$mmio_8cpp.html#a103c86119a15e95de20a15b3b017def2" title="Unmap the memory range that was mapped during initialization." alt="" coords="180,56,332,83"/>
+</map>

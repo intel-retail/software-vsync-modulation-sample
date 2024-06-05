@@ -1,0 +1,5 @@
+<map id="combo::program_mmio" name="combo::program_mmio">
+<area shape="rect" id="node1" title="This function programs the Combo Phy MMIO registers needed to move avsync period for a system." alt="" coords="435,5,609,32"/>
+<area shape="rect" id="node2" href="$classcombo.html#a48dc16384e4c53025aff3a8612261a86" title="This function programs Combo phys on the system." alt="" coords="5,5,165,32"/>
+<area shape="rect" id="node3" href="$classcombo.html#a3c03e5e9e2a56b48ff9c6ea66bce184a" title="This function resets the Combo Phy MMIO registers to their original value. It gets executed whenever ..." alt="" coords="213,31,387,57"/>
+</map>

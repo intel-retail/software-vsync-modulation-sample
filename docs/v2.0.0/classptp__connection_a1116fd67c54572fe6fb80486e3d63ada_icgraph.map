@@ -1,0 +1,4 @@
+<map id="ptp_connection::str_to_l2_addr" name="ptp_connection::str_to_l2_addr">
+<area shape="rect" id="node1" title="This function converts a string based ethernet address to the l2 format. The result is stored in addr..." alt="" coords="204,5,351,47"/>
+<area shape="rect" id="node2" href="$classptp__connection.html#addd630b8bfb29c8b4d640129e283ecbc" title="This function initializes the client. Besides opening a PTP socket, we also convert the ethernet addr..." alt="" coords="5,5,156,47"/>
+</map>

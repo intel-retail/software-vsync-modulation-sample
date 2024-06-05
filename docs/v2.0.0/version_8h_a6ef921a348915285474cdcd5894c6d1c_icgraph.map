@@ -1,0 +1,6 @@
+<map id="get_version" name="get_version">
+<area shape="rect" id="node1" title="Constructs a version string from major, minor, and patch numbers." alt="" coords="217,31,316,57"/>
+<area shape="rect" id="node2" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="111,5,166,32"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a2ef30c42cbc289d899a8be5d2d8f77d0" title="Prints the usage of the program." alt="" coords="108,56,169,83"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,56,60,83"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="combo::wait_until_done" name="combo::wait_until_done">
+<area shape="rect" id="node1" title="This function waits until the Combo programming is finished. There is a timer for which time the new ..." alt="" coords="5,31,183,57"/>
+<area shape="rect" id="node2" href="$classphys.html#ad73924fe8d62296f92fb6b5776ebd91a" title=" " alt="" coords="241,5,345,32"/>
+<area shape="rect" id="node3" href="$classphys.html#a07c541454d107aadcdf869908be61efd" title=" " alt="" coords="231,56,355,83"/>
+</map>

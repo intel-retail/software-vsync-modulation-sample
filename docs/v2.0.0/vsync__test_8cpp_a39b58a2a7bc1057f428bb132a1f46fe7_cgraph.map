@@ -1,0 +1,7 @@
+<map id="server_close_signal" name="server_close_signal">
+<area shape="rect" id="node1" title="This function closes the server&#39;s socket." alt="" coords="5,31,156,57"/>
+<area shape="rect" id="node2" href="$classconnection.html#a4b7a7d1ce6ab9f9de9113b59df911503" title="Closes a server&#39;s socket." alt="" coords="204,5,387,32"/>
+<area shape="rect" id="node3" href="$vsyncalter_8h.html#a35dc013212b176f47265e64746fedc0d" title="This function uninitializes the library by closing devices and unmapping memory. It must be called at..." alt="" coords="232,56,359,83"/>
+<area shape="rect" id="node4" href="$vsyncalter_8cpp.html#a6c3688799fc62d197fe8e3b25ba950cf" title="This function deallocates all members of the phy_enabled_list." alt="" coords="445,31,576,57"/>
+<area shape="rect" id="node5" href="$mmio_8cpp.html#a103c86119a15e95de20a15b3b017def2" title="Unmap the memory range that was mapped during initialization." alt="" coords="435,81,587,108"/>
+</map>

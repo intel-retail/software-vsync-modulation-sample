@@ -1,0 +1,4 @@
+<map id="ptp_connection::send_msg" name="ptp_connection::send_msg">
+<area shape="rect" id="node1" title="This function sends a message to a destination address using sendto API." alt="" coords="5,5,200,32"/>
+<area shape="rect" id="node2" href="$classconnection.html#a535d212e860d1a615e69f524ad91a274" title="This function sends a message to the other system using the send API." alt="" coords="248,5,428,32"/>
+</map>

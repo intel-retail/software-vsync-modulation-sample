@@ -1,0 +1,5 @@
+<map id="dkl::program_mmio" name="dkl::program_mmio">
+<area shape="rect" id="node1" title="This function programs the DKL Phy MMIO registers needed to move a vsync period for a system." alt="" coords="387,5,537,32"/>
+<area shape="rect" id="node2" href="$classdkl.html#a7eba437d29c0f07ea0e98a10c4169a61" title="This function programs DKL phys on the system." alt="" coords="5,5,141,32"/>
+<area shape="rect" id="node3" href="$classdkl.html#a2c467dbd5229a9dade6b4654694e23ae" title=" " alt="" coords="189,31,339,57"/>
+</map>

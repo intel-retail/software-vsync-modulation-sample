@@ -1,0 +1,4 @@
+<map id="connection::recv_msg" name="connection::recv_msg">
+<area shape="rect" id="node1" title=" " alt="" coords="5,5,169,32"/>
+<area shape="rect" id="node2" href="$classconnection.html#a8d26a5bf6691a16c27825b70debcd32d" title="This function receives a message to the other system using the recv API." alt="" coords="217,5,412,32"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="vsync_lib_init" name="vsync_lib_init">
+<area shape="rect" id="node1" title="This function initializes the library. It must be called ahead of all other functions because it open..." alt="" coords="5,132,116,159"/>
+<area shape="rect" id="node2" href="$vsyncalter_8cpp.html#a4e6e0eb077dbbca33e1b46831375abd8" title=" " alt="" coords="164,56,307,83"/>
+<area shape="rect" id="node5" href="$mmio_8cpp.html#aba63761c97bf3ce8d09b95186f08d487" title="This functions gets the deivce ID of the device." alt="" coords="179,107,291,133"/>
+<area shape="rect" id="node7" href="$mmio_8cpp.html#a27c965f14e3b33dbdaae56d707dc39f4" title="This functions maps the MMIO region." alt="" coords="187,157,283,184"/>
+<area shape="rect" id="node9" href="$vsyncalter_8cpp.html#a35dc013212b176f47265e64746fedc0d" title="This function uninitializes the library by closing devices and unmapping memory. It must be called at..." alt="" coords="172,208,299,235"/>
+<area shape="rect" id="node3" href="$classphys.html#ad3682305151b6fe10b2ecf771282fa8a" title=" " alt="" coords="395,5,495,32"/>
+<area shape="rect" id="node4" href="$classphys.html#ae3f11f89d561c45ec9233729f4382733" title=" " alt="" coords="387,56,503,83"/>
+<area shape="rect" id="node6" href="$mmio_8cpp.html#a2fbf38be7295d345a8dd72b4c618cf4f" title="Looks up the main graphics pci device using libpciaccess." alt="" coords="367,107,522,133"/>
+<area shape="rect" id="node8" href="$mmio_8cpp.html#ada91c2b510d23f69cb4af413ffc9384d" title="Fill a mmio_data stucture with igt_mmio to point at the mmio bar." alt="" coords="355,157,535,184"/>
+<area shape="rect" id="node10" href="$vsyncalter_8cpp.html#a6c3688799fc62d197fe8e3b25ba950cf" title="This function deallocates all members of the phy_enabled_list." alt="" coords="379,208,510,235"/>
+<area shape="rect" id="node11" href="$mmio_8cpp.html#a103c86119a15e95de20a15b3b017def2" title="Unmap the memory range that was mapped during initialization." alt="" coords="369,259,521,285"/>
+</map>

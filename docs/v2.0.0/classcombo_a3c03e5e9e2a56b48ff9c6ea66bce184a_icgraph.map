@@ -1,0 +1,4 @@
+<map id="combo::reset_phy_regs" name="combo::reset_phy_regs">
+<area shape="rect" id="node1" title="This function resets the Combo Phy MMIO registers to their original value. It gets executed whenever ..." alt="" coords="213,5,387,32"/>
+<area shape="rect" id="node2" href="$classcombo.html#a48dc16384e4c53025aff3a8612261a86" title="This function programs Combo phys on the system." alt="" coords="5,5,165,32"/>
+</map>

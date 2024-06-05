@@ -1,0 +1,7 @@
+<map id="phys::get_ds" name="phys::get_ds">
+<area shape="rect" id="node1" title=" " alt="" coords="231,81,335,108"/>
+<area shape="rect" id="node2" href="$classcombo.html#a48dc16384e4c53025aff3a8612261a86" title="This function programs Combo phys on the system." alt="" coords="14,5,174,32"/>
+<area shape="rect" id="node3" href="$classdkl.html#a7eba437d29c0f07ea0e98a10c4169a61" title="This function programs DKL phys on the system." alt="" coords="26,56,162,83"/>
+<area shape="rect" id="node4" href="$classcombo.html#a3a89a99a4845a01f979c0ff2b26b6db1" title="This function waits until the Combo programming is finished. There is a timer for which time the new ..." alt="" coords="5,107,183,133"/>
+<area shape="rect" id="node5" href="$classdkl.html#a4d1403b5ab2de6a44ff6bdbc722787e2" title="This function waits until the DKL programming is finished. There is a timer for which time the new va..." alt="" coords="17,157,171,184"/>
+</map>

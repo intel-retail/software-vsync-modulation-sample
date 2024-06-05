@@ -1,0 +1,5 @@
+<map id="phys::make_timer" name="phys::make_timer">
+<area shape="rect" id="node1" title="This function creates a timer." alt="" coords="213,31,352,57"/>
+<area shape="rect" id="node2" href="$classcombo.html#a48dc16384e4c53025aff3a8612261a86" title="This function programs Combo phys on the system." alt="" coords="5,5,165,32"/>
+<area shape="rect" id="node3" href="$classdkl.html#a7eba437d29c0f07ea0e98a10c4169a61" title="This function programs DKL phys on the system." alt="" coords="17,56,153,83"/>
+</map>

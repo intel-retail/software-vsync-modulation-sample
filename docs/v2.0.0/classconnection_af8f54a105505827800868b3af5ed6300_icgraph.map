@@ -1,0 +1,11 @@
+<map id="connection::open_socket" name="connection::open_socket">
+<area shape="rect" id="node1" title="This function opens a TCP socket stream." alt="" coords="544,56,727,83"/>
+<area shape="rect" id="node2" href="$classconnection.html#a60cce1534f624b7db9b09c5377f9fab5" title="This function initalizes the client, by opening the socket and connecting to the server." alt="" coords="319,5,484,32"/>
+<area shape="rect" id="node5" href="$classconnection.html#a96130f5b9d6d63d51c35dc746988e8cc" title="This function initalizes the server by opening a socket, binding the server and listening for any inc..." alt="" coords="316,56,487,83"/>
+<area shape="rect" id="node7" href="$classptp__connection.html#a4223e85345baa73a33ba3eeb2af21db9" title="This function opens a ptp socket, find the corresponding interface index and binds the connection." alt="" coords="307,115,496,141"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#aaf4da81aa0bbd7eeb5c7094d4decd35d" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="127,5,239,32"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,31,60,57"/>
+<area shape="rect" id="node6" href="$vsync__test_8cpp.html#a2b051595562e86bcc7ae070fc4f4f3a6" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="135,56,231,83"/>
+<area shape="rect" id="node8" href="$classptp__connection.html#addd630b8bfb29c8b4d640129e283ecbc" title="This function initializes the client. Besides opening a PTP socket, we also convert the ethernet addr..." alt="" coords="108,107,259,149"/>
+<area shape="rect" id="node9" href="$classptp__connection.html#a646c620003bc3bf475774df86b901cfd" title="This function initializes the PTP server. It&#39;s just a wrapper around ptp_open." alt="" coords="108,173,259,214"/>
+</map>

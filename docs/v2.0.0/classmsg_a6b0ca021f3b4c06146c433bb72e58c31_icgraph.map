@@ -1,0 +1,5 @@
+<map id="msg::set_vblank_count" name="msg::set_vblank_count">
+<area shape="rect" id="node1" title=" " alt="" coords="268,5,440,32"/>
+<area shape="rect" id="node2" href="$vsync__test_8cpp.html#aaf4da81aa0bbd7eeb5c7094d4decd35d" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="108,5,220,32"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,5,60,32"/>
+</map>

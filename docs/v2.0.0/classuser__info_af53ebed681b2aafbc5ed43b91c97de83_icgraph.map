@@ -1,0 +1,7 @@
+<map id="user_info::get_reg" name="user_info::get_reg">
+<area shape="rect" id="node1" title=" " alt="" coords="435,31,573,57"/>
+<area shape="rect" id="node2" href="$classcombo.html#a3c03e5e9e2a56b48ff9c6ea66bce184a" title="This function resets the Combo Phy MMIO registers to their original value. It gets executed whenever ..." alt="" coords="213,5,387,32"/>
+<area shape="rect" id="node4" href="$classdkl.html#a2c467dbd5229a9dade6b4654694e23ae" title=" " alt="" coords="225,56,375,83"/>
+<area shape="rect" id="node3" href="$classcombo.html#a48dc16384e4c53025aff3a8612261a86" title="This function programs Combo phys on the system." alt="" coords="5,5,165,32"/>
+<area shape="rect" id="node5" href="$classdkl.html#a7eba437d29c0f07ea0e98a10c4169a61" title="This function programs DKL phys on the system." alt="" coords="17,56,153,83"/>
+</map>

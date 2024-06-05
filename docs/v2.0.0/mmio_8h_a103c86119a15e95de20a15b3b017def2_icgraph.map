@@ -1,0 +1,9 @@
+<map id="close_mmio_handle" name="close_mmio_handle">
+<area shape="rect" id="node1" title="Unmap the memory range that was mapped during initialization." alt="" coords="625,31,777,57"/>
+<area shape="rect" id="node2" href="$vsyncalter_8h.html#a35dc013212b176f47265e64746fedc0d" title="This function uninitializes the library by closing devices and unmapping memory. It must be called at..." alt="" coords="451,31,577,57"/>
+<area shape="rect" id="node3" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="129,5,183,32"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a39b58a2a7bc1057f428bb132a1f46fe7" title="This function closes the server&#39;s socket." alt="" coords="252,81,403,108"/>
+<area shape="rect" id="node7" href="$vsyncalter_8h.html#a1ccc7c011ad035e21d4367fc5dcb412c" title="This function initializes the library. It must be called ahead of all other functions because it open..." alt="" coords="272,31,383,57"/>
+<area shape="rect" id="node5" href="$vsync__test_8cpp.html#a2b051595562e86bcc7ae070fc4f4f3a6" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="108,81,204,108"/>
+<area shape="rect" id="node6" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,81,60,108"/>
+</map>

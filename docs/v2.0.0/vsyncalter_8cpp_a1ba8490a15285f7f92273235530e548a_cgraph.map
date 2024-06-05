@@ -1,0 +1,7 @@
+<map id="get_vsync" name="get_vsync">
+<area shape="rect" id="node1" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="5,81,93,108"/>
+<area shape="rect" id="node2" href="$vsyncalter_8cpp.html#a207d247b175aba8213284ecf344ddd77" title="This function closes an open handle." alt="" coords="149,5,256,32"/>
+<area shape="rect" id="node3" href="$vsyncalter_8cpp.html#aa4cbfb6dcebfe97b9923cbc44394cc1f" title="This function opens /dev/dri/card0." alt="" coords="151,56,255,83"/>
+<area shape="rect" id="node4" href="$vsyncalter_8cpp.html#aa5b2359b39d48f12b1e5698243aa677c" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="312,132,443,159"/>
+<area shape="rect" id="node5" href="$vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8" title="The function which will be called whenever a VBLANK occurs." alt="" coords="141,157,264,184"/>
+</map>

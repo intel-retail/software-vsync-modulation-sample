@@ -1,0 +1,7 @@
+<map id="intel_get_pci_device" name="intel_get_pci_device">
+<area shape="rect" id="node1" title="Looks up the main graphics pci device using libpciaccess." alt="" coords="427,31,581,57"/>
+<area shape="rect" id="node2" href="$mmio_8cpp.html#aba63761c97bf3ce8d09b95186f08d487" title="This functions gets the deivce ID of the device." alt="" coords="267,5,379,32"/>
+<area shape="rect" id="node5" href="$mmio_8cpp.html#a27c965f14e3b33dbdaae56d707dc39f4" title="This functions maps the MMIO region." alt="" coords="275,56,371,83"/>
+<area shape="rect" id="node3" href="$vsyncalter_8h.html#a1ccc7c011ad035e21d4367fc5dcb412c" title="This function initializes the library. It must be called ahead of all other functions because it open..." alt="" coords="108,31,219,57"/>
+<area shape="rect" id="node4" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,31,60,57"/>
+</map>
