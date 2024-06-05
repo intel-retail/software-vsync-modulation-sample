@@ -1,5 +1,26 @@
-// Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+/*
+ * Copyright © 2024 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ */
 
 #include "connection.h"
 #include "message.h"
@@ -18,14 +39,14 @@
 #include <errno.h>
 #include <ctype.h>
 
-/*******************************************************************************
- * Description
- *	open_socket - This function opens a TCP socket stream
- * Parameters
- *	int type - TCP/UDP/PTP
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function opens a TCP socket stream
+* @param type - TCP/UDP/PTP
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int connection::open_socket(int type)
 {
 	sockfd = socket(type == PTP ? AF_PACKET : AF_INET, type == TCP ? SOCK_STREAM : SOCK_DGRAM, 0);
@@ -37,16 +58,14 @@ int connection::open_socket(int type)
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	set_server - This function sets server characteristics like portid
- * Parameters
- *  sockaddr_in *addr - The address data structure that needs to be filled
- *	int s_addr - server address
- *	int portid - port id
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* This function sets server characteristics like portid
+* @param *addr - The address data structure that needs to be filled
+* @param s_addr - server address
+* @param portid - port id
+* @return void
+*/
 void connection::set_server(sockaddr_in *addr, int s_addr, int portid)
 {
 	memset(addr, 0, sizeof(sockaddr_in));
@@ -55,15 +74,15 @@ void connection::set_server(sockaddr_in *addr, int s_addr, int portid)
 	addr->sin_port = htons(portid);
 }
 
-/*******************************************************************************
- * Description
- *	init_client - This function initalizes the client, by opening the socket and
- *	connecting to the server.
- * Parameters
- *	const char *server_name - Either the server's hostname or its IP address
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function initalizes the client, by opening the socket and
+* connecting to the server.
+* @param *server_name - Either the server's hostname or its IP address
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int connection::init_client(const char *server_name)
 {
 	char server_host_addr[MAX_LEN] = {0}, copy[MAX_LEN] = {0}, *ptr;
@@ -108,42 +127,36 @@ int connection::init_client(const char *server_name)
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	close_client - Closes a client's connection to the server
- * Parameters
- *	NONE
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* Closes a client's connection to the server
+* @param None
+* @return void
+*/
 void connection::close_client()
 {
 	close(sockfd);
 }
 
-/*******************************************************************************
- * Description
- *	close_server - Closes a server's socket
- * Parameters
- *	NONE
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* Closes a server's socket
+* @param None
+* @return void
+*/
 void connection::close_server()
 {
 	close(sockfd);
 }
 
-/*******************************************************************************
- * Description
- *	pr_inet
- * Parameters
- *	char **listptr
- *	int length
- *	char * buffer
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* pr_inet
+* @param **listptr
+* @param length
+* @param *buffer
+* @return void
+*/
 void connection::pr_inet(char **listptr, int length, char * buffer)
 {
 	struct in_addr *ptr;
@@ -152,15 +165,15 @@ void connection::pr_inet(char **listptr, int length, char * buffer)
 	}
 }
 
-/*******************************************************************************
- * Description
- *	init_server - This function initalizes the server by opening a socket,
- *	binding the server and listening for any incoming connections.
- * Parameters
- *	NONE
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function initalizes the server by opening a socket,
+* binding the server and listening for any incoming connections.
+* @param None
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int connection::init_server()
 {
 	int ret, optval = 1;
@@ -189,16 +202,16 @@ int connection::init_server()
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	accept_client - This function waits until a client connects to it. It uses
- *	the accept API to listen in for any incoming client connections.
- * Parameters
- *	int *new_sockfd - The socket id at which the client has connected. This will
- *	be used for future communication with the client.
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function waits until a client connects to it. It uses
+* the accept API to listen in for any incoming client connections.
+* @param *new_sockfd - The socket id at which the client has connected. This will
+* be used for future communication with the client.
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int connection::accept_client(int *new_sockfd)
 {
 	socklen_t fromlen;
@@ -215,20 +228,20 @@ int connection::accept_client(int *new_sockfd)
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	sendto_msg - This function sends a message to the other system using the send API
- * Parameters
- *	void *m - The message that we need to send
- *	int size - The size of this message
- *	int sockid - If not 0, this function will use this socket connection to
- *	communicate with the other system on. If 0, then a global sockfd variable will
- *	be used.
- *	struct sockaddr *dest - The destination address
- *	int dest_size - Size of the destination data structure
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function sends a message to the other system using the send API
+* @param *m - The message that we need to send
+* @param size - The size of this message
+* @param sockid - If not 0, this function will use this socket connection to
+*	communicate with the other system on. If 0, then a global sockfd variable will
+*	be used.
+* @param *dest - The destination address
+* @param dest_size - Size of the destination data structure
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int connection::sendto_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
 {
 	long bytes_returned;
@@ -246,21 +259,20 @@ int connection::sendto_msg(void *m, int size, int sockid, struct sockaddr *dest,
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	recvfrom_msg - This function receives a message to the other system using the
- *	recv API
- * Parameters
- *	void *m - The message that we need to receive
- *	int size - The size of this message
- *	int sockid - If not 0, this function will use this socket connection to
- *	communicate with the other system on. If 0, then a global sockfd variable will
- *	be used.
- *	struct sockaddr *dest - The destination address
- *	int dest_size - Size of the destination data structure
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function receives a message to the other system using the recv API
+* @param *m - The message that we need to receive
+* @param size - The size of this message
+* @param sockid - If not 0, this function will use this socket connection to
+*	communicate with the other system on. If 0, then a global sockfd variable will
+*	be used.
+* @param *dest - The destination address
+* @param dest_size - Size of the destination data structure
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
 {
 	long bytes_returned;
@@ -279,40 +291,37 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	Constructor of ptp_connection class. This just initializes a few class
- *	members
- * Parameters
- *	char *ifc - The PTP interface of the server. For examle: enp176s0
- *	char *ip - The ethernet address of the server. For example:
- *		84:47:09:04:eb:0e
- * Return val
- *	NONE
- ******************************************************************************/
-ptp_connection::ptp_connection(char *ifc, char *ip)
+/**
+* @brief
+* Constructor of ptp_connection class. This just initializes a few class members
+* @param *ifc - The PTP interface of the server. For examle: enp176s0
+* @param *mac - The ethernet MAC address of the server. For example:
+*		84:47:09:04:eb:0e
+* @return void
+*/
+ptp_connection::ptp_connection(char *ifc, char *mac)
 {
 	con_type = PTP;
 	memset(server_ip, 0, MAX_LEN);
 	memset(iface, 0, MAX_LEN);
 
 	strncpy(iface, ifc, MAX_LEN-1);
-	if(ip) {
-		strncpy(server_ip, ip, MAX_LEN-1);
+	if(mac) {
+		strncpy(server_ip, mac, MAX_LEN-1);
 	}
 	memset(&dest_sa, 0, sizeof(dest_sa));
 }
 
-/*******************************************************************************
- * Description
- *	find_iface_index - Given a PTP interface name, this function finds the index
- *	of this interface. It does so by sending the SIOCGIFINDEX IOCTL to the
- *	network driver.
- * Parameters
- *	const char *iface - The PTP interface of the server. For examle: enp176s0
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* Given a PTP interface name, this function finds the index
+* of this interface. It does so by sending the SIOCGIFINDEX IOCTL to the
+* network driver.
+* @param *iface - The PTP interface of the server. For examle: enp176s0
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int ptp_connection::find_iface_index(const char *iface)
 {
 	int sd;
@@ -339,15 +348,15 @@ int ptp_connection::find_iface_index(const char *iface)
 }
 
 #define MAX_MAC_ADDR_LEN 17
-/*******************************************************************************
- * Description
- *	str_to_l2_addr - This function converts a string based ethernet address to
- *	the l2 format. The result is stored in addr member variable
- * Parameters
- *	char *str - The address to convert.
- * Return val
- *	bool - true = SUCCESS, false = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function converts a string based ethernet address to
+* the l2 format. The result is stored in addr member variable
+* @param *str - The address to convert.
+* @return
+* - true = SUCCESS
+* - false = FAILURE
+*/
 bool ptp_connection::str_to_l2_addr(char *str)
 {
 	int i;
@@ -371,15 +380,15 @@ bool ptp_connection::str_to_l2_addr(char *str)
 	return i == ETH_ALEN-1 ? true : false;
 }
 
-/*******************************************************************************
- * Description
- *	ptp_open - This function opens a ptp socket, find the corresponding interface
- *	index and binds the connection.
- * Parameters
- *	const char *iface
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function opens a ptp socket, find the corresponding interface
+* index and binds the connection.
+* @param *iface
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int ptp_connection::ptp_open(const char *iface)
 {
 	struct sockaddr_ll bind_arg;
@@ -410,15 +419,15 @@ int ptp_connection::ptp_open(const char *iface)
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	init_client - This function initializes the client. Besides opening a PTP
- *	socket, we also convert the ethernet address in the format that we need.
- * Parameters
- *	const char *server_name
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function initializes the client. Besides opening a PTP
+* socket, we also convert the ethernet address in the format that we need.
+* @param *server_name
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int ptp_connection::init_client(const char *server_name)
 {
 	if(ptp_open(iface)) {
@@ -437,15 +446,15 @@ int ptp_connection::init_client(const char *server_name)
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	init_server - This function initializes the PTP server. It's just a wrapper
- *	around ptp_open.
- * Parameters
- *	NONE
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function initializes the PTP server. It's just a wrapper
+* around ptp_open.
+* @param None
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int ptp_connection::init_server()
 {
 	if(ptp_open(iface)) {
@@ -454,33 +463,33 @@ int ptp_connection::init_server()
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	send_msg - This function sends a message to a destination address using
- *	sendto API.
- * Parameters
- *	void *m - The message to send
- *	int size - The size of this message
- *	int sockid - The file descriptor to send to
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function sends a message to a destination address using
+* sendto API.
+* @param *m - The message to send
+* @param size - The size of this message
+* @param sockid - The file descriptor to send to
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int ptp_connection::send_msg(void *m, int size, int sockid)
 {
 	return sendto_msg(m, size, sockid, (struct sockaddr *) &dest_sa, sizeof(dest_sa));
 }
 
-/*******************************************************************************
- * Description
- *	recv_msg - This function receives a message from a source address using
- *	recvfrom API.
- * Parameters
- *	void *m - The message to receive
- *	int size - The size of this message
- *	int sockid - The file descriptor to receive from
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function receives a message from a source address using
+* recvfrom API.
+* @param *m - The message to receive
+* @param size - The size of this message
+* @param sockid - The file descriptor to receive from
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int ptp_connection::recv_msg(void *m, int size, int sockid)
 {
 	return recvfrom_msg(m, size, sockid, (struct sockaddr *) &dest_sa, sizeof(dest_sa));

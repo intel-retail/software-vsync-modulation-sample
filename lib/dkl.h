@@ -1,5 +1,26 @@
-// Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+/*
+ * Copyright © 2024 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ */
 
 #ifndef _DKL_H
 #define _DKL_H
@@ -32,12 +53,18 @@ typedef struct _dkl_phy_reg {
 	int done;
 } dkl_phy_reg;
 
-extern dkl_phy_reg dkl_table[];
+class dkl : public phys {
+public:
+	dkl(ddi_sel *ds, int first_dkl_phy_loc);
+	~dkl() {};
 
-int find_enabled_dkl_phys();
-void program_dkl_phys(double time_diff, timer_t *t);
-void wait_until_dkl_done(timer_t t);
-void program_dkl_mmio(dkl_phy_reg *pr, int mod);
-void reset_dkl(int sig, siginfo_t *si, void *uc);
+	void program_mmio(dkl_phy_reg *pr, int mod);
+	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
+
+	void program_phy(double time_diff);
+	void wait_until_done();
+};
+
+extern dkl_phy_reg dkl_table[];
 
 #endif

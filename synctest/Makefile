@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 export PWD=$(shell pwd)
@@ -33,7 +33,7 @@ $(BINNAME): $(OBJECTS)
 	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(INCLUDES) $< 
 
 debug:
-	@export DBG_FLAGS='-g'; \
+	@export DBG_FLAGS='-g -D DEBUGON'; \
 	$(MAKE)
 
 clean:

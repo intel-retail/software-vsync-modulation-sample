@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 export PWD=$(shell pwd)
@@ -7,7 +7,7 @@ MAKE += --no-print-directory
 export CC=g++
 export DBG_FLAGS?=-Ofast
 export LIBS=-lrt -ldrm -lpciaccess
-export INCLUDES=-I../cmn -I/usr/include/drm
+export INCLUDES=-I../cmn -I/usr/include/drm -Iplatforms
 export CFLAGS=-c -fPIC
 export LFLAGS=-Wall
 export HEADERS=$(wildcard *.h)
@@ -34,7 +34,7 @@ $(BINNAME): $(OBJECTS)
 	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(LFLAGS) $(INCLUDES) $< 
 
 debug:
-	@export DBG_FLAGS='-g'; \
+	@export DBG_FLAGS='-g -D DEBUGON'; \
 	$(MAKE)
 
 clean:

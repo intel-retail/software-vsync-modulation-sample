@@ -1,5 +1,26 @@
-// Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+/*
+ * Copyright © 2024 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ */
 
 #ifndef _COMBO_H
 #define _COMBO_H
@@ -13,9 +34,8 @@
 #define ICL_PHY_MISC(port)            _MMIO_PORT(port, _ICL_PHY_MISC_A, _ICL_PHY_MISC_B)
 #define ICL_PHY_MISC_DE_IO_COMP_PWR_DOWN (1 << 23)
 #define COMP_INIT                     (1 << 31)
-/*
- * CNL/ICL Port/COMBO-PHY Registers
- */
+
+// CNL/ICL Port/COMBO-PHY Registers
 #define _ICL_COMBOPHY_A               0x162000
 #define _ICL_COMBOPHY_B               0x6C000
 #define _EHL_COMBOPHY_C               0x160000
@@ -38,7 +58,7 @@
 										   _ADL_COMBOPHY_E)
 #define _ICL_PORT_COMP_DW(dw, phy)    (_ICL_COMBOPHY(phy) + _ICL_PORT_COMP + 4 * (dw))
 #define ICL_PORT_COMP_DW0(phy)        _ICL_PORT_COMP_DW(0, phy)
-#define READ_VAL(r, v)                combo_table[i].r.v = READ_OFFSET_DWORD(combo_table[i].r.addr);
+#define READ_VAL(r, v)                combo_phy->r.v = READ_OFFSET_DWORD(combo_phy->r.addr);
 
 typedef struct _combo_phy_reg {
 	reg cfgcr0;
@@ -52,13 +72,18 @@ typedef struct _div_val {
 	int val;
 } div_val;
 
-extern combo_phy_reg combo_table[];
+class combo : public phys {
+public:
+	combo(ddi_sel *ds);
+	~combo() {};
 
-int find_enabled_combo_phys();
-void program_combo_phys(double time_diff, timer_t *t);
-void wait_until_combo_done(timer_t t);
-void program_combo_mmio(combo_phy_reg *pr, int mod);
-void reset_combo(int sig, siginfo_t *si, void *uc);
-void cleanup_list();
+	void program_mmio(combo_phy_reg *pr, int mod);
+	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
+
+	void program_phy(double time_diff);
+	void wait_until_done();
+};
+
+extern combo_phy_reg combo_table[];
 
 #endif
