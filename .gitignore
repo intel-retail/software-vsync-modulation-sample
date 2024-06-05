@@ -1,0 +1,9 @@
+# Specify what should be included in the documention branch, gh-pages
+# Ignore everything
+*
+
+# Documentation is in a directory named 'docs'
+# This directory is automatically published to gh-pages
+!.gitgnore
+!/docs
+!/docs/**
