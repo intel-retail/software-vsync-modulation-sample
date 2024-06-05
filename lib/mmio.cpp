@@ -1,5 +1,26 @@
-// Copyright (C) 2023 Intel Corporation
-// SPDX-License-Identifier: MIT
+/*
+ * Copyright © 2024 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ */
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -9,6 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <cerrno>
+#include <mutex>
 #include "mmio.h"
 #include <debug.h>
 
@@ -37,15 +60,14 @@ unsigned long crcinit_direct;
 unsigned long crcinit_nondirect;
 unsigned long crctab[256];
 struct pci_device *pci_dev = NULL;
+std::mutex map_mutex; // Global mutex to protect map_cmn
 
-/*******************************************************************************
- * Description
- *	intel_get_pci_device - Looks up the main graphics pci device using libpciaccess.
- * Parameters
- *	None
- * Return val
- *	struct pci_device * - The pci device or NULL in case of a failure
- ******************************************************************************/
+/**
+* @brief
+* Looks up the main graphics pci device using libpciaccess.
+* @param None
+* @return The pci device or NULL in case of a failure
+*/
 struct pci_device *intel_get_pci_device(void)
 {
 	struct pci_device *pci_dev;
@@ -57,14 +79,14 @@ struct pci_device *intel_get_pci_device(void)
 		return NULL;
 	}
 
-	/* Grab the graphics card. Try the canonical slot first, then
-	 * walk the entire PCI bus for a matching device. */
+	// Grab the graphics card. Try the canonical slot first, then
+	// walk the entire PCI bus for a matching device.
 	pci_dev = pci_device_find_by_slot(0, 0, 2, 0);
 	if (pci_dev == NULL || pci_dev->vendor_id != 0x8086) {
 		struct pci_device_iterator *iter;
 		struct pci_id_match match;
 
-		match.vendor_id = 0x8086; /* Intel */
+		match.vendor_id = 0x8086; // Intel
 		match.device_id = PCI_MATCH_ANY;
 		match.subvendor_id = PCI_MATCH_ANY;
 		match.subdevice_id = PCI_MATCH_ANY;
@@ -98,15 +120,14 @@ struct pci_device *intel_get_pci_device(void)
 	return pci_dev;
 }
 
-/*******************************************************************************
- * Description
- *	intel_mmio_use_pci_bar - Fill a mmio_data stucture with igt_mmio to point
- *	at the mmio bar.
- * Parameters
- *	struct pci_device *pci_dev - intel graphics pci device
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* Fill a mmio_data stucture with igt_mmio to point at the mmio bar.
+* @param *pci_dev - intel graphics pci device
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 {
 	int mmio_bar, mmio_size;
@@ -128,14 +149,12 @@ int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 	return 0;
 }
 
-/*******************************************************************************
- * Description
- *	get_device_id - This functions gets the deivce ID of the device
- * Parameters
- *	NONE
- * Return val
- *	int - device_id (ex 4680 = SUCCESS, 0 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This functions gets the deivce ID of the device
+* @param None
+* @return device_id (ex 4680 = SUCCESS, 0 = FAILURE)
+*/
 int get_device_id()
 {
 	if(!pci_dev) {
@@ -144,14 +163,14 @@ int get_device_id()
 	return pci_dev ? pci_dev->device_id : 0;
 }
 
-/*******************************************************************************
- * Description
- *	map_mmio - This functions maps the MMIO region
- * Parameters
- *	NONE
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This functions maps the MMIO region
+* @param None
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int map_mmio()
 {
 	if(!pci_dev) {
@@ -161,17 +180,19 @@ int map_mmio()
 }
 
 
-/*******************************************************************************
- * Description
- *	map_cmn - This function can either map MMIO or regular video memory
- * Parameters
- *	int base_index - Which bar to map
- *	int size - The size of memory to map
- * Return val
- *	int - 0 = SUCCESS, 1 = FAILURE
- ******************************************************************************/
+/**
+* @brief
+* This function can either map MMIO or regular video memory
+* @param base_index - Which bar to map
+* @param size - The size of memory to map
+* @return
+* - 0 = SUCCESS
+* - 1 = FAILURE
+*/
 int map_cmn(int base_index, int size)
 {
+	std::lock_guard<std::mutex> lock(map_mutex); // Lock the mutex for the scope of the function
+
 	int found = 0;
 	loff_t base;
 	int ret_val = 1;
@@ -249,17 +270,18 @@ int map_cmn(int base_index, int size)
 	return ret_val;
 }
 
-/*******************************************************************************
- * Description
- *	close_mmio_handle - Unmap the memory range that was mapped during initialization
- * Parameters
- *	NONE
- * Return val
- *	void
- ******************************************************************************/
+/**
+* @brief
+* Unmap the memory range that was mapped during initialization
+* @param None
+* @return void
+*/
 void close_mmio_handle()
 {
 	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
-	close(g_fd);
+	pci_system_cleanup();
+	if (close(g_fd) == -1) {
+		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+	}
 }
 

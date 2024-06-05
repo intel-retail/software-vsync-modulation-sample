@@ -22,16 +22,19 @@
  *
  */
 
-#ifndef _VSYNCALTER_H
-#define _VSYNCALTER_H
+#ifndef _ADL_S_H
+#define _ADL_S_H
 
-#define ONE_VSYNC_PERIOD_IN_MS        16.666
-#define MAX_TIMESTAMPS                100
-#define ALL_PIPES                     4
+#include "../common.h"
 
-int vsync_lib_init();
-void vsync_lib_uninit();
-void synchronize_vsync(double time_diff, int pipe = ALL_PIPES);
-int get_vsync(long *vsync_array, int size, int pipe = 0);
+ddi_sel adl_s_ddi_sel[] = {
+	// name     phy     de_clk  dpclk               clock_bit   mux_select_low_bit  dpll_num    phy_data
+	{"DDI_A",   COMBO,  1,      REG(DPCLKA_CFGCR0), 10,         0,                  0,          NULL,},
+	{"DDI_C1",  COMBO,  4,      REG(DPCLKA_CFGCR0), 11,         2,                  0,          NULL,},
+	{"DDI_C2",  COMBO,  5,      REG(DPCLKA_CFGCR0), 24,         4,                  0,          NULL,},
+	{"DDI_C3",  COMBO,  6,      REG(DPCLKA_CFGCR1), 4,          0,                  0,          NULL,},
+	{"DDI_C4",  COMBO,  7,      REG(DPCLKA_CFGCR1), 5,          2,                  0,          NULL,},
+};
+
 
 #endif

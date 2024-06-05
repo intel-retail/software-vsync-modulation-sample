@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 #DIRS = $(shell find . -maxdepth 1 -type d -not -path "./.git" \
@@ -18,16 +18,20 @@ debug:
 		$(MAKE) -C $$dir debug; \
 	done
 
+doxygen:
+	@mkdir -p output/doxygen
+	@( cat resources/swgen_doxy ; echo "PROJECT_NUMBER=$(VERSION)" ) | doxygen -
 clean:
 	@for dir in $(DIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
 
 distclean:
-	@rm -rf release
+	@rm -rf output
 
-release: distclean
+release:
+	@rm -rf output/release
 	@$(MAKE) clean
 	@$(MAKE)
-	@mkdir release
-	@cp lib/*.so test/vsync_test synctest/synctest vbltest/vbltest release
+	@mkdir -p output/release
+	@cp lib/*.so resources/gPTP.cfg test/vsync_test synctest/synctest vbltest/vbltest output/release

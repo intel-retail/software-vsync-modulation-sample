@@ -22,16 +22,28 @@
  *
  */
 
-#ifndef _VSYNCALTER_H
-#define _VSYNCALTER_H
+#ifndef _VERSION_H
+#define _VERSION_H
 
-#define ONE_VSYNC_PERIOD_IN_MS        16.666
-#define MAX_TIMESTAMPS                100
-#define ALL_PIPES                     4
+#include <string>
+#include <sstream>
 
-int vsync_lib_init();
-void vsync_lib_uninit();
-void synchronize_vsync(double time_diff, int pipe = ALL_PIPES);
-int get_vsync(long *vsync_array, int size, int pipe = 0);
+#define VERSION_MAJOR 2
+#define VERSION_MINOR 0
+#define VERSION_PATCH 0
+
+/**
+ * @brief Constructs a version string from major, minor, and patch numbers.
+ * 
+ * @return A string representing the version in the format "major.minor.patch".
+ */
+static inline std::string get_version() 
+{
+    std::ostringstream version_stream;
+    version_stream << VERSION_MAJOR << '.'
+                  << VERSION_MINOR << '.'
+                  << VERSION_PATCH;
+    return version_stream.str();
+}
 
 #endif
