@@ -139,6 +139,7 @@ typedef struct _platform {
 
 extern platform platform_table[];
 extern int supported_platform;
+extern int client_done;
 
 void timer_handler(int sig, siginfo_t *si, void *uc);
 unsigned int pipe_to_wait_for(int pipe);

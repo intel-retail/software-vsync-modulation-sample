@@ -33,5 +33,6 @@ int vsync_lib_init();
 void vsync_lib_uninit();
 void synchronize_vsync(double time_diff, int pipe = ALL_PIPES);
 int get_vsync(long *vsync_array, int size, int pipe = 0);
+void shutdown_lib(void);
 
 #endif

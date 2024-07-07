@@ -218,10 +218,16 @@ void combo::wait_until_done()
 	ddi_sel *ds = get_ds();
 	combo_phy_reg *combo_phy = (combo_phy_reg *) ds->phy_data;
 
-	// Wait to write back the original value
-	while(!combo_phy->done) {
+	// Wait to write back the original value.  Exit loop if Ctrl+C pressed
+	while(!combo_phy->done && !client_done) {
 		usleep(1000);
 	}
+
+	// Restore original values in case of app termination
+	if (client_done) {
+		reset_phy_regs(combo_phy);
+	}
+
 	timer_delete(get_timer());
 }
 
@@ -270,9 +276,14 @@ void combo::reset_phy_regs(int sig, siginfo_t *si, void *uc)
 	DBG("timer done\n");
 	combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
 	combo * c = (combo *) ui->get_type();
-	c->program_mmio(cr, 0);
+	c->reset_phy_regs(cr);
+	delete ui;
+}
+
+void combo::reset_phy_regs(combo_phy_reg *cr)
+{
+	program_mmio(cr, 0);
 	DBG("DEFAULT VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
 			cr->cfgcr0.addr, cr->cfgcr0.orig_val, cr->cfgcr1.addr, cr->cfgcr1.orig_val);
 	cr->done = 1;
-	delete ui;
 }

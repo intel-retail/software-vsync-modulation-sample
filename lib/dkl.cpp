@@ -195,9 +195,15 @@ void dkl::wait_until_done()
 	ddi_sel *ds = get_ds();
 	dkl_phy_reg *dkl_phy = (dkl_phy_reg *) ds->phy_data;
 
-	while(!dkl_phy->done) {
+	while(!dkl_phy->done && !client_done) {
 		usleep(1000);
 	}
+
+	// Restore original values in case of app termination
+	if (client_done) {
+		reset_phy_regs(dkl_phy);
+	}
+
 	timer_delete(get_timer());
 }
 
@@ -269,7 +275,13 @@ void dkl::reset_phy_regs(int sig, siginfo_t *si, void *uc)
 	dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
 	dkl *d = (dkl *) ui->get_type();
 
-	d->program_mmio(dr, 0);
+	d->reset_phy_regs(dr);
+	delete ui;
+}
+
+void dkl::reset_phy_regs(dkl_phy_reg *dr)
+{
+	program_mmio(dr, 0);
 	DBG("DEFAULT VALUES\n dkl_pll_div0 [0x%X] =\t 0x%X\n dkl_visa_serializer [0x%X] =\t 0x%X\n "
 			"dkl_bias [0x%X] =\t 0x%X\n dkl_ssc [0x%X] =\t 0x%X\n dkl_dco [0x%X] =\t 0x%X\n",
 			dr->dkl_pll_div0.addr,
@@ -283,5 +295,4 @@ void dkl::reset_phy_regs(int sig, siginfo_t *si, void *uc)
 			dr->dkl_dco.addr,
 			dr->dkl_dco.orig_val);
 	dr->done = 1;
-	delete ui;
 }

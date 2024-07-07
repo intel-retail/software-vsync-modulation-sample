@@ -83,6 +83,10 @@ void server_close_signal(int sig)
 void client_close_signal(int sig)
 {
 	DBG("Closing client's socket\n");
+
+	// Inform vsync lib about Ctrl+C signal
+	shutdown_lib();
+
 	client_done = 1;
 }
 

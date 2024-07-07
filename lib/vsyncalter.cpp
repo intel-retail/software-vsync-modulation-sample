@@ -54,6 +54,7 @@ int g_dev_fd = 0;
 int supported_platform = 0;
 list<phys *> *phy_enabled_list = NULL;
 
+int client_done = 0;
 /**
 * @brief
 *	This function creates a timer.
@@ -217,6 +218,17 @@ void cleanup_phy_list()
 		delete phy_enabled_list;
 		phy_enabled_list = NULL;
 	}
+}
+
+/**
+* @brief
+* Sets a global flag to indicate client app termination via Ctrl+C
+* @param None
+* @return void
+*/
+void shutdown_lib(void)
+{
+	client_done = 1;
 }
 
 /**
