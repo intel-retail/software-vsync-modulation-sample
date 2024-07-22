@@ -195,12 +195,12 @@ void dkl::wait_until_done()
 	ddi_sel *ds = get_ds();
 	dkl_phy_reg *dkl_phy = (dkl_phy_reg *) ds->phy_data;
 
-	while(!dkl_phy->done && !client_done) {
+	while(!dkl_phy->done && !lib_client_done) {
 		usleep(1000);
 	}
 
 	// Restore original values in case of app termination
-	if (client_done) {
+	if (lib_client_done) {
 		reset_phy_regs(dkl_phy);
 	}
 

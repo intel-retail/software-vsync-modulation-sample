@@ -148,7 +148,7 @@ void combo::program_phy(double time_diff)
 	make_timer((long) steps, ui, reset_phy_regs);
 #endif
 	DBG("OLD VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
-			combo_phy->cfgcr0.addr, combo_phy->cfgcr0.orig_val, 
+			combo_phy->cfgcr0.addr, combo_phy->cfgcr0.orig_val,
 			combo_phy->cfgcr1.addr, combo_phy->cfgcr1.orig_val);
 
 	// Symbol clock frequency in MHz (base) = DCO Divider// Reference frequency in MHz /  (5// Pdiv// Qdiv// Kdiv)
@@ -219,12 +219,12 @@ void combo::wait_until_done()
 	combo_phy_reg *combo_phy = (combo_phy_reg *) ds->phy_data;
 
 	// Wait to write back the original value.  Exit loop if Ctrl+C pressed
-	while(!combo_phy->done && !client_done) {
+	while(!combo_phy->done && !lib_client_done) {
 		usleep(1000);
 	}
 
 	// Restore original values in case of app termination
-	if (client_done) {
+	if (lib_client_done) {
 		reset_phy_regs(combo_phy);
 	}
 

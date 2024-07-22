@@ -54,7 +54,7 @@ int g_dev_fd = 0;
 int supported_platform = 0;
 list<phys *> *phy_enabled_list = NULL;
 
-int client_done = 0;
+int lib_client_done = 0;
 /**
 * @brief
 *	This function creates a timer.
@@ -228,7 +228,7 @@ void cleanup_phy_list()
 */
 void shutdown_lib(void)
 {
-	client_done = 1;
+	lib_client_done = 1;
 }
 
 /**
