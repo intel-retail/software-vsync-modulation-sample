@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <xf86drm.h>
+#include <xf86drmMode.h>
 #include <tgl.h>
 #include <adl_s.h>
 #include <adl_p.h>
@@ -233,6 +234,103 @@ void shutdown_lib(void)
 
 /**
 * @brief
+* Prints the DRM information.	Loops through all CRTCs and Connectors and prints
+* their information.
+* @param None
+* @return void
+*/
+void print_drm_info(void)
+{
+	// This list covers most of the connector types that are supported by the DRM
+	const char* connector_type_str[] = {
+		"Unknown",      // 0
+		"VGA",          // 1
+		"DVI-I",        // 2
+		"DVI-D",        // 3
+		"DVI-A",        // 4
+		"Composite",    // 5
+		"S-Video",      // 6
+		"LVDS",         // 7
+		"Component",    // 8
+		"9PinDIN",      // 9
+		"DisplayPort",  // 10
+		"HDMI-A",       // 11
+		"HDMI-B",       // 12
+		"TV",           // 13
+		"eDP",          // 14
+		"Virtual",      // 15
+		"DSI",          // 16
+		"DPI",          // 17
+		"WriteBack",    // 18
+		"SPI",          // 19
+		"USB"           // 20
+	};
+
+	int fd = open_device();
+	if (fd < 0) {
+		ERR("Failed to open DRM device: %s\n", strerror(errno));
+		return ;
+	}
+
+	drmModeRes *resources = drmModeGetResources(fd);
+	if (!resources) {
+		ERR("drmModeGetResources failed: %s\n", strerror(errno));
+		close(fd);
+		return;
+	}
+	INFO("DRM Info:\n");
+
+	// First print Pipe/CRTC info
+	INFO("  CRTCs found: %d\n", resources->count_crtcs);
+	for (int i = 0; i < resources->count_crtcs; i++) {
+		drmModeCrtc *crtc = drmModeGetCrtc(fd, resources->crtcs[i]);
+		if (!crtc) {
+			ERR("drmModeGetCrtc failed: %s\n", strerror(errno));
+			continue;
+		}
+
+		double refresh_rate = 0;
+		if (crtc->mode_valid) {
+			refresh_rate = (double)crtc->mode.clock * 1000.0 / (crtc->mode.vtotal * crtc->mode.htotal);
+		}
+
+		INFO("  \tPipe: %2d, CRTC ID: %4d, Mode Valid: %3s, Mode Name: %s, Position: (%4d, %4d), Resolution: %4dx%-4d, Refresh Rate: %.2f Hz\n",
+			   i, crtc->crtc_id, (crtc->mode_valid) ? "Yes" : "No", crtc->mode.name,
+				crtc->x, crtc->y, crtc->mode.hdisplay, crtc->mode.vdisplay, refresh_rate);
+
+		drmModeFreeCrtc(crtc);
+	}
+
+	// Print Connector info
+	INFO("  Connectors found: %d\n", resources->count_connectors);
+	for (int i = 0; i < resources->count_connectors; i++) {
+		drmModeConnector *connector = drmModeGetConnector(fd, resources->connectors[i]);
+		if (!connector) {
+			ERR("drmModeGetConnector failed: %s\n", strerror(errno));
+			continue;
+		}
+
+		INFO("  \tConnector: %-4d (ID: %-4d), Type: %-4d (%-12s), Type ID: %-4d, Connection: %-12s\n",
+				i, connector->connector_id, connector->connector_type, connector_type_str[connector->connector_type],
+				connector->connector_type_id,
+				(connector->connection == DRM_MODE_CONNECTED) ? "Connected" : "Disconnected");
+
+		if (connector->connection == DRM_MODE_CONNECTED) {
+			drmModeEncoder *encoder = drmModeGetEncoder(fd, connector->encoder_id);
+			if (encoder) {
+				INFO("\t\t\tEncoder ID: %d, CRTC ID: %d\n", encoder->encoder_id, encoder->crtc_id);
+				drmModeFreeEncoder(encoder);
+			}
+		}
+		drmModeFreeConnector(connector);
+	}
+
+	drmModeFreeResources(resources);
+	close(fd);
+}
+
+/**
+* @brief
 * This function initializes the library. It must be called
 * ahead of all other functions because it opens device, maps MMIO space and
 * initializes any key global variables.
@@ -245,6 +343,9 @@ int vsync_lib_init()
 {
 	int device_id, i, j;
 	if(!IS_INIT()) {
+		// Show Pipe and CRTC info
+		print_drm_info();
+
 		// Get the device id of this platform
 		device_id = get_device_id();
 		DBG("Device id is 0x%X\n", device_id);
