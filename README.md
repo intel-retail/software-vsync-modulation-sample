@@ -1,3 +1,5 @@
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/intel-retail/automated-vending/badge)](https://api.securityscorecards.dev/projects/github.com/intel-retail/automated-vending)
+
  Copyright (C) 2023 Intel Corporation
  SPDX-License-Identifier: MIT
 
