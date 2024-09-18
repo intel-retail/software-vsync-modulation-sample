@@ -31,7 +31,7 @@ SUDO="sudo"
 # Primary machine configuration
 PRIMARY_INERFACE="enpxxxx"
 PRIMARY_ETH_ADDR="xx:xx:xx:xx:xx:xx"
-PRIMARY_PROJ_PATH="$HOME/project" # Sample path
+PRIMARY_PROJ_PATH="<path on primary>/project" # Sample path
 
 # Secondary machine configuration.
 #IP needed for IP based communcation only
@@ -39,8 +39,9 @@ SECONDARY_ADDRESS="user@192.xxx.xx.xx"
 SECONDARY_INTERFACE="enpxxxx"
 
 EXECUTABLE_NAME="vsync_test"
-# Path on secondary where the executable will be copied to
-CLIENT_DIR="$HOME/.vblanksync"
+# Path on secondary where the executable will be copied to.
+# Update path accordingly. e.g user's home directory
+CLIENT_DIR="<path on secondary>/.vblanksync"
 
 # Output log files
 PRIMARY_LOG_PTP="primary_ptp.log"

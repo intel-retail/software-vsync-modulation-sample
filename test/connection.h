@@ -82,7 +82,7 @@ protected:
 	int find_iface_index(const char *iface);
 	bool str_to_l2_addr(char *str);
 public:
-	ptp_connection(char *ifc, char *mac = NULL);
+	ptp_connection(const char *ifc, const char *mac = NULL);
 	int init_client(const char *server_name);
 	int init_server();
 	int send_msg(void *m, int size, int sockid);

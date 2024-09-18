@@ -323,7 +323,7 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 *		84:47:09:04:eb:0e
 * @return void
 */
-ptp_connection::ptp_connection(char *ifc, char *mac)
+ptp_connection::ptp_connection(const char *ifc, const char *mac)
 {
 	con_type = PTP;
 	memset(server_ip, 0, MAX_LEN);

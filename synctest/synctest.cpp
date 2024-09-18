@@ -33,6 +33,23 @@
 using namespace std;
 
 /**
+ * @brief
+ * Print help message
+ *
+ * @param program_name - Name of the program
+ * @return void
+ */
+void print_help(const char *program_name)
+{
+	PRINT("Usage: %s [-p pipe] [-d delta] [-h]\n"
+		"Options:\n"
+		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 4 All pipes)\n"
+		"  -d delta       Drift time in us to achieve (default: 1000 us) e.g 1000 us = 1.0 ms\n"
+		"  -h             Display this help message\n",
+		program_name);
+}
+
+/**
 * @brief
 * This is the main function
 * @param argc - The number of command line arguments
@@ -45,13 +62,37 @@ int main(int argc, char *argv[])
 {
 	int ret = 0;
 	INFO("Synctest Version: %s\n", get_version().c_str());
-	
+
+	int delta = 1000;  //  Drift in us to achieve from current time
+	int pipe = ALL_PIPES;  // Default pipe# 4
+	int opt;
+	while ((opt = getopt(argc, argv, "p:d:h")) != -1) {
+		switch (opt) {
+			case 'p':
+				pipe = std::stoi(optarg);
+				break;
+			case 'd':
+				delta = std::stoi(optarg);
+				break;
+			case 'h':
+			case '?':
+				if (optopt == 'p' || optopt == 'd') {
+					ERR("Option -%c requires an argument.\n", char(optopt));
+				} else {
+					ERR("Unknown option: -%c\n", char(optopt));
+				}
+				print_help(argv[0]);
+				exit(EXIT_FAILURE);
+		}
+	}
+
 	if(vsync_lib_init()) {
 		ERR("Couldn't initialize vsync lib\n");
 		return 1;
 	}
 
-	synchronize_vsync(1.0);
+	// Convert delta to milliseconds before calling
+	synchronize_vsync((double) delta / 1000.0, pipe);
 
 	vsync_lib_uninit();
 	return ret;
