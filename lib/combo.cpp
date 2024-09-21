@@ -104,9 +104,8 @@ int get_val_from_bit(div_val *dt, int dt_size, int bit)
 * @param *t - A pointer to a pointer where we need to store the timer
 * @return void
 */
-void combo::program_phy(double time_diff)
+void combo::program_phy(double time_diff, double shift)
 {
-	double shift = SHIFT;
 	div_val pdiv_table[4] = {
 		{1, 2},
 		{2, 3},

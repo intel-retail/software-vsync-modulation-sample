@@ -414,7 +414,7 @@ void vsync_lib_uninit()
 * ALL_PIPES as the value, then all pipes will be synchronized.
 * @return void
 */
-void synchronize_vsync(double time_diff, int pipe)
+void synchronize_vsync(double time_diff, int pipe, double shift)
 {
 	if(!IS_INIT()) {
 		ERR("Uninitialized lib, please call lib init first\n");
@@ -426,7 +426,7 @@ void synchronize_vsync(double time_diff, int pipe)
 			it != phy_enabled_list->end(); it++) {
 				if(pipe == ALL_PIPES || pipe == (*it)->get_pipe()) {
 					// Program the phy
-					(*it)->program_phy(time_diff);
+					(*it)->program_phy(time_diff, shift);
 					// Wait until it is done before moving on to the next phy
 					(*it)->wait_until_done();
 				}

@@ -76,9 +76,8 @@ dkl::dkl(ddi_sel *ds, int first_dkl_phy_loc)
 * @param *t - A pointer to a pointer where we need to store the timer
 * @return void
 */
-void dkl::program_phy(double time_diff)
+void dkl::program_phy(double time_diff, double shift)
 {
-	double shift = SHIFT;
 	ddi_sel *ds = get_ds();
 	dkl_phy_reg *dkl_phy = (dkl_phy_reg *) ds->phy_data;
 

@@ -81,7 +81,7 @@ public:
 	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
 	void reset_phy_regs(combo_phy_reg *dr);
 
-	void program_phy(double time_diff);
+	void program_phy(double time_diff, double shift);
 	void wait_until_done();
 };
 

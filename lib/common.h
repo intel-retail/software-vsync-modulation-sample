@@ -125,7 +125,7 @@ public:
 	ddi_sel *get_ds() { return m_ds; }
 	int make_timer(long expire_ms, void *user_ptr, reset_func reset);
 
-	virtual void program_phy(double time_diff) = 0;
+	virtual void program_phy(double time_diff, double shift) = 0;
 	virtual void wait_until_done() = 0;
 };
 

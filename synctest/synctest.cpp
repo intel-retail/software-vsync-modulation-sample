@@ -41,10 +41,11 @@ using namespace std;
  */
 void print_help(const char *program_name)
 {
-	PRINT("Usage: %s [-p pipe] [-d delta] [-h]\n"
+	PRINT("Usage: %s [-p pipe] [-d delta] [-s shift] [-h]\n"
 		"Options:\n"
 		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 4 All pipes)\n"
 		"  -d delta       Drift time in us to achieve (default: 1000 us) e.g 1000 us = 1.0 ms\n"
+		"  -s shift       PLL frequency change fraction (default: 0.1)\n"
 		"  -h             Display this help message\n",
 		program_name);
 }
@@ -64,9 +65,10 @@ int main(int argc, char *argv[])
 	INFO("Synctest Version: %s\n", get_version().c_str());
 
 	int delta = 1000;  //  Drift in us to achieve from current time
+	double shift = 0.01;
 	int pipe = ALL_PIPES;  // Default pipe# 4
 	int opt;
-	while ((opt = getopt(argc, argv, "p:d:h")) != -1) {
+	while ((opt = getopt(argc, argv, "p:d:s:h")) != -1) {
 		switch (opt) {
 			case 'p':
 				pipe = std::stoi(optarg);
@@ -74,9 +76,12 @@ int main(int argc, char *argv[])
 			case 'd':
 				delta = std::stoi(optarg);
 				break;
+			case 's':
+				shift = std::stod(optarg);
+				break;
 			case 'h':
 			case '?':
-				if (optopt == 'p' || optopt == 'd') {
+				if (optopt == 'p' || optopt == 'd' || optopt == 's') {
 					ERR("Option -%c requires an argument.\n", char(optopt));
 				} else {
 					ERR("Unknown option: -%c\n", char(optopt));
@@ -92,7 +97,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Convert delta to milliseconds before calling
-	synchronize_vsync((double) delta / 1000.0, pipe);
+	synchronize_vsync((double) delta / 1000.0, pipe, shift);
 
 	vsync_lib_uninit();
 	return ret;

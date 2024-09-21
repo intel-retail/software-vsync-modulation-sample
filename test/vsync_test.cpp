@@ -217,7 +217,8 @@ int do_secondary(
 	const char *ptp_eth_address,
 	int pipe,
 	int synchronize,
-	int timestamps)
+	int timestamps,
+	double shift)
 {
 	msg m, r;
 	int ret = 0;
@@ -314,7 +315,7 @@ int do_secondary(
 
 	if(synchronize) {
 		if(abs(delta) > synchronize) {
-			synchronize_vsync((double) delta / 1000, pipe);
+			synchronize_vsync((double) delta / 1000, pipe, shift);
 			INFO("Synchronizing after %d seconds\n", counter);
 			counter = 0;
 		}
@@ -339,13 +340,14 @@ int do_secondary(
  */
 void print_help(const char *program_name)
 {
-	PRINT("Usage: %s [-m mode] [-i interface] [-c mac_address] [-d delta] [-p pipe] [-h]\n"
+	PRINT("Usage: %s [-m mode] [-i interface] [-c mac_address] [-d delta] [-p pipe] [-s shift] [-h]\n"
 		"Options:\n"
 		"  -m mode        Mode of operation: pri, sec (default: pri)\n"
 		"  -i interface   Network interface to listen on (primary) or connect to (secondary) (default: 127.0.0.1)\n"
 		"  -c mac_address MAC address of the network interface to connect to. Applicable to ethernet interface mode only.\n"
 		"  -d delta       Drift time in microseconds to allow before pll reprogramming (default: 100 us)\n"
 		"  -p pipe        Pipe to get stamps for.  4 (all) or 0,1,2 ... (default: 0)\n"
+		"  -s shift       PLL frequency change fraction (default: 0.1)\n"
 		"  -h             Display this help message\n",
 		program_name);
 
@@ -369,7 +371,8 @@ int main(int argc, char *argv[])
 	int timestamps = MAX_TIMESTAMPS;
 	int pipe = 0;  // Default pipe# 0
 	int opt, delta = 100;
-	while ((opt = getopt(argc, argv, "m:i:c:p:t:d:h")) != -1) {
+	double shift = 0.01;
+	while ((opt = getopt(argc, argv, "m:i:c:p:t:d:s:h")) != -1) {
 		switch (opt) {
 			case 'm':
 				modeStr = optarg;
@@ -389,10 +392,13 @@ int main(int argc, char *argv[])
 			case 'd':
 				delta = std::stoi(optarg);
 				break;
+			case 's':
+				shift = std::stod(optarg);
+				break;
 			case 'h':
 			case '?':
-				if (optopt == 'm' || optopt == 'i' || optopt == 'c' || optopt == 'p'
-					|| optopt == 'i' || optopt == 't' || optopt == 'd') {
+				if (optopt == 'm' || optopt == 'i' || optopt == 'c' || optopt == 'p' ||
+					optopt == 'i' || optopt == 't' || optopt == 'd' || optopt == 's') {
 					ERR("Option -%c requires an argument.\n", char(optopt));
 				} else {
 					ERR("Unknown option: -%c\n", char(optopt));
@@ -405,9 +411,10 @@ int main(int argc, char *argv[])
 	// Print configurations
 	INFO("Configuration:\n");
 	INFO("\tMode: %s\n", modeStr.c_str());
-	INFO("\tInterface or IP: %s\n", interface_or_ip.c_str());
-	INFO("\tSec Mac Address: %s\n", mac_address.c_str());
+	INFO("\tInterface or IP: %s\n", interface_or_ip.length() > 0 ? interface_or_ip.c_str() : "N/A");
+	INFO("\tSec Mac Address: %s\n", mac_address.length() > 0 ? mac_address.c_str() : "N/A");
 	INFO("\tDelta: %d us\n", delta);
+	INFO("\tShift: %.3lf\n", shift);
 	INFO("\tPipe ID: %d\n", pipe);
 
 
@@ -427,7 +434,7 @@ int main(int argc, char *argv[])
 		do {
 				ret = do_secondary(interface_or_ip.c_str(),
 					mac_address.length() > 0 ? mac_address.c_str() : NULL,
-					pipe, delta, timestamps);
+					pipe, delta, timestamps, shift);
 
 				timestamps = 2;
 				sleep(1);
