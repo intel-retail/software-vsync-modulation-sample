@@ -340,7 +340,7 @@ int do_secondary(
  */
 void print_help(const char *program_name)
 {
-	PRINT("Usage: %s [-m mode] [-i interface] [-c mac_address] [-d delta] [-p pipe] [-s shift] [-h]\n"
+	PRINT("Usage: %s [-m mode] [-i interface] [-c mac_address] [-d delta] [-p pipe] [-s shift] [-v loglevel] [-h]\n"
 		"Options:\n"
 		"  -m mode        Mode of operation: pri, sec (default: pri)\n"
 		"  -i interface   Network interface to listen on (primary) or connect to (secondary) (default: 127.0.0.1)\n"
@@ -348,6 +348,7 @@ void print_help(const char *program_name)
 		"  -d delta       Drift time in microseconds to allow before pll reprogramming (default: 100 us)\n"
 		"  -p pipe        Pipe to get stamps for.  4 (all) or 0,1,2 ... (default: 0)\n"
 		"  -s shift       PLL frequency change fraction (default: 0.1)\n"
+		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
 		"  -h             Display this help message\n",
 		program_name);
 
@@ -366,13 +367,14 @@ int main(int argc, char *argv[])
 {
 	int ret = 0;
 	std::string modeStr = "pri";
+	std::string log_level = "info";
 	std::string interface_or_ip = "";  // Default to localhost
 	std::string mac_address = "";
 	int timestamps = MAX_TIMESTAMPS;
 	int pipe = 0;  // Default pipe# 0
 	int opt, delta = 100;
 	double shift = 0.01;
-	while ((opt = getopt(argc, argv, "m:i:c:p:t:d:s:h")) != -1) {
+	while ((opt = getopt(argc, argv, "m:i:c:p:t:d:s:v:h")) != -1) {
 		switch (opt) {
 			case 'm':
 				modeStr = optarg;
@@ -395,10 +397,15 @@ int main(int argc, char *argv[])
 			case 's':
 				shift = std::stod(optarg);
 				break;
+			case 'v':
+				log_level = optarg;
+				set_log_level(optarg);
+				break;
 			case 'h':
 			case '?':
 				if (optopt == 'm' || optopt == 'i' || optopt == 'c' || optopt == 'p' ||
-					optopt == 'i' || optopt == 't' || optopt == 'd' || optopt == 's') {
+					optopt == 'i' || optopt == 't' || optopt == 'd' || optopt == 's' ||
+					optopt == 'v') {
 					ERR("Option -%c requires an argument.\n", char(optopt));
 				} else {
 					ERR("Unknown option: -%c\n", char(optopt));
@@ -406,6 +413,12 @@ int main(int argc, char *argv[])
 				print_help(argv[0]);
 				exit(EXIT_FAILURE);
 		}
+	}
+
+	if (modeStr == "pri") {
+		set_log_mode("[ PRIMARY ]");
+	} else if (modeStr == "sec") {
+		set_log_mode("[SECONDARY]");
 	}
 
 	// Print configurations
@@ -416,7 +429,7 @@ int main(int argc, char *argv[])
 	INFO("\tDelta: %d us\n", delta);
 	INFO("\tShift: %.3lf\n", shift);
 	INFO("\tPipe ID: %d\n", pipe);
-
+	INFO("\tLog Level: %s\n", log_level.c_str());
 
 	if(vsync_lib_init()) {
 		ERR("Couldn't initialize vsync lib\n");

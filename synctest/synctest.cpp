@@ -41,11 +41,12 @@ using namespace std;
  */
 void print_help(const char *program_name)
 {
-	PRINT("Usage: %s [-p pipe] [-d delta] [-s shift] [-h]\n"
+	PRINT("Usage: %s [-p pipe] [-d delta] [-s shift] [-v loglevel] [-h]\n"
 		"Options:\n"
 		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 4 All pipes)\n"
 		"  -d delta       Drift time in us to achieve (default: 1000 us) e.g 1000 us = 1.0 ms\n"
 		"  -s shift       PLL frequency change fraction (default: 0.1)\n"
+		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
 		"  -h             Display this help message\n",
 		program_name);
 }
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
 	double shift = 0.01;
 	int pipe = ALL_PIPES;  // Default pipe# 4
 	int opt;
-	while ((opt = getopt(argc, argv, "p:d:s:h")) != -1) {
+	while ((opt = getopt(argc, argv, "p:d:s:v:h")) != -1) {
 		switch (opt) {
 			case 'p':
 				pipe = std::stoi(optarg);
@@ -79,9 +80,12 @@ int main(int argc, char *argv[])
 			case 's':
 				shift = std::stod(optarg);
 				break;
+			case 'v':
+				set_log_level(optarg);
+				break;
 			case 'h':
 			case '?':
-				if (optopt == 'p' || optopt == 'd' || optopt == 's') {
+				if (optopt == 'p' || optopt == 'd' || optopt == 's' || optopt == 'v') {
 					ERR("Option -%c requires an argument.\n", char(optopt));
 				} else {
 					ERR("Unknown option: -%c\n", char(optopt));

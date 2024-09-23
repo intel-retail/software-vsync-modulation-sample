@@ -76,10 +76,11 @@ void print_vsyncs(char *msg, long *va, int sz)
  */
 void print_help(const char *program_name)
 {
-	PRINT("Usage: %s [-p pipe] [-c vsync_count] [-h]\n"
+	PRINT("Usage: %s [-p pipe] [-c vsync_count] [-v loglevel] [-h]\n"
 		"Options:\n"
 		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 0)\n"
 		"  -c vsync_count Number of vsyncs to get timestamp for (default: 300)\n"
+		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
 		"  -h             Display this help message\n",
 		program_name);
 }
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
 	int vsync_count = 300;  // number of vsyncs to get timestamp for
 	int pipe = 0;  // Default pipe# 0
 	int opt;
-	while ((opt = getopt(argc, argv, "p:c:h")) != -1) {
+	while ((opt = getopt(argc, argv, "p:c:v:h")) != -1) {
 		switch (opt) {
 			case 'p':
 				pipe = std::stoi(optarg);
@@ -110,9 +111,12 @@ int main(int argc, char *argv[])
 			case 'c':
 				vsync_count = std::stoi(optarg);
 				break;
+			case 'v':
+				set_log_level(optarg);
+				break;
 			case 'h':
 			case '?':
-				if (optopt == 'p' || optopt == 'c') {
+				if (optopt == 'p' || optopt == 'c' || optopt == 'v') {
 					ERR("Option -%c requires an argument.\n", char(optopt));
 				} else {
 					ERR("Unknown option: -%c\n", char(optopt));
