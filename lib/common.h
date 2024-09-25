@@ -32,15 +32,19 @@ using namespace std;
 #define TESTING                       0
 #define SHIFT                         (0.1)
 #define REF_COMBO_FREQ                19.2
+#define REF_CLK_FREQ                  38.4
 #define ONE_SEC_IN_NS                 (1000 * 1000 * 1000)
 #define TV_NSEC(t)                    ((long) ((t * 1000000) % ONE_SEC_IN_NS))
 #define TV_SEC(t)                     ((time_t) ((t * 1000000) / ONE_SEC_IN_NS))
 #define TIME_IN_USEC(sec, usec)       (unsigned long) (1000000 * sec + usec)
 #define BIT(nr)                       (1UL << (nr))
+#define REG_BIT8                      BIT
 #define ARRAY_SIZE(a)                 (int) (sizeof(a)/sizeof(a[0]))
 #define BITS_PER_LONG                 64
 #define GENMASK(h, l) \
 	(((~0UL) - (1UL << (l)) + 1) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#define REG_GENMASK                   GENMASK
+#define REG_GENMASK8                  GENMASK
 #define GETBITS_VAL(val, h, l)       ((val & GENMASK(h, l)) >> l)
 #define _PICK_EVEN(__index, __a, __b) ((__a) + (__index) * ((__b) - (__a)))
 #define _PICK(__index, ...)           (((const uint32_t []){ __VA_ARGS__ })[__index])
@@ -65,7 +69,8 @@ using namespace std;
 enum {
 	DKL,
 	COMBO,
-//	C10,
+	C10,
+	C20,
 	TOTAL_PHYS,
 };
 

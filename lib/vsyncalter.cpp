@@ -40,15 +40,18 @@
 #include <tgl.h>
 #include <adl_s.h>
 #include <adl_p.h>
+#include <mtl.h>
 #include "mmio.h"
 #include "dkl.h"
 #include "combo.h"
+#include "c10.h"
 #include "i915_pciids.h"
 
 platform platform_table[] = {
-	{"TGL",   {INTEL_TGL_IDS},  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel), 4},
-	{"ADL_S_FAM", {INTEL_ADLS_FAM_IDS}, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
-	{"ADL_P_FAM", {INTEL_ADLP_FAM_IDS}, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
+	{"TGL",       {INTEL_TGL_IDS},       tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel),   4},
+	{"ADL_S_FAM", {INTEL_ADL_S_FAM_IDS}, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
+	{"ADL_P_FAM", {INTEL_ADL_P_FAM_IDS}, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
+	{"MTL",       {INTEL_MTL_FAM_IDS},   mtl_ddi_sel,   ARRAY_SIZE(mtl_ddi_sel),   0},
 };
 
 int g_dev_fd = 0;
@@ -133,7 +136,6 @@ int find_enabled_phys()
 		REG(TRANS_DDI_FUNC_CTL_C),
 		REG(TRANS_DDI_FUNC_CTL_D),
 	};
-	phys *new_phy;
 
 	// According to the BSpec:
 	// 0000b	None
@@ -166,10 +168,13 @@ int find_enabled_phys()
 			continue;
 		}
 
+
 		// TRANS_DDI_FUNC_CTL bits 30:27 have the DDI which this pipe is connected to
 		ddi_select = GETBITS_VAL(val, 30, 27);
 		DBG("ddi_select = 0x%X\n", ddi_select);
 		for(j = 0; j < platform_table[supported_platform].ds_size; j++) {
+
+			phys *new_phy = NULL;
 			// Match the DDI with the available ones on this platform
 			if(platform_table[supported_platform].ds[j].de_clk == ddi_select) {
 				switch(platform_table[supported_platform].ds[j].phy) {
@@ -177,15 +182,27 @@ int find_enabled_phys()
 						DBG("Detected a DKL phy on pipe %d\n", i+1);
 						new_phy = new dkl(&platform_table[supported_platform].ds[j],
 							platform_table[supported_platform].first_dkl_phy_loc);
-					break;
+						break;
 					case COMBO:
 						DBG("Detected a Combo phy on pipe %d\n", i+1);
 						new_phy = new combo(&platform_table[supported_platform].ds[j]);
-					break;
+						break;
+					case C10:
+						DBG("Detected a C10 phy on pipe %d\n", i+1);
+						new_phy = new c10(&platform_table[supported_platform].ds[j]);
+						break;
+					case C20:
+						DBG("Detected a C20 phy on pipe %d. (Not implemented)\n", i+1);
+						break;
 					default:
 						ERR("Unsupported PHY. Phy is %d\n", platform_table[supported_platform].ds[j].phy);
 						return 1;
-					break;
+						break;
+				}
+
+				// Ignore PHYs that we don't support yet
+				if (new_phy == NULL) {
+					continue;
 				}
 				if(!new_phy->is_init()) {
 					ERR("PHY not initialized properly\n");
@@ -427,6 +444,7 @@ void synchronize_vsync(double time_diff, int pipe, double shift)
 				if(pipe == ALL_PIPES || pipe == (*it)->get_pipe()) {
 					// Program the phy
 					(*it)->program_phy(time_diff, shift);
+
 					// Wait until it is done before moving on to the next phy
 					(*it)->wait_until_done();
 				}

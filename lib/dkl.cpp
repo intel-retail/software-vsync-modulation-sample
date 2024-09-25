@@ -139,15 +139,15 @@ void dkl::program_phy(double time_diff, double shift)
 	int i_fbprediv_3_0    = GETBITS_VAL(dkl_phy->dkl_pll_div0.orig_val, 11, 8);
 	int i_fbdiv_intgr_7_0 = GETBITS_VAL(dkl_phy->dkl_pll_div0.orig_val, 7, 0);
 	int i_fbdivfrac_21_0  = GETBITS_VAL(dkl_phy->dkl_bias.orig_val, 29, 8);
-	double pll_freq = (double) (REF_DKL_FREQ * i_fbprediv_3_0 * (i_fbdiv_intgr_7_0 + i_fbdivfrac_21_0 / pow(2, 22)));
+	double pll_freq = (double) (REF_CLK_FREQ * i_fbprediv_3_0 * (i_fbdiv_intgr_7_0 + i_fbdivfrac_21_0 / pow(2, 22)));
 	double new_pll_freq = pll_freq + (shift * pll_freq / 100);
-	double new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_DKL_FREQ * i_fbprediv_3_0)) - i_fbdiv_intgr_7_0) * pow(2,22);
+	double new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_CLK_FREQ * i_fbprediv_3_0)) - i_fbdiv_intgr_7_0) * pow(2,22);
 
 	if(new_i_fbdivfrac_21_0 < 0) {
 		i_fbdiv_intgr_7_0 -= 1;
 		dkl_phy->dkl_pll_div0.mod_val &= ~GENMASK(7, 0);
 		dkl_phy->dkl_pll_div0.mod_val |= i_fbdiv_intgr_7_0;
-		new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_DKL_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
+		new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_CLK_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
 	}
 
 	DBG("old pll_freq \t %f\n", pll_freq);
