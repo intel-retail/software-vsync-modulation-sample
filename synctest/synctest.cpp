@@ -31,6 +31,30 @@
 #include "version.h"
 
 using namespace std;
+int thread_continue = 1;
+
+/**
+ * @brief
+ * This function is the background thread task to call print_vblank_interval
+ *
+ * @param arg
+ * @return void*
+ */
+void* background_task(void *arg)
+{
+	const int WAIT_TIME_IN_MICRO = 1000*1000;  // 1 sec
+	int pipe = *(int*)arg;
+	double avg_interval;
+
+	INFO("VBlank interval during synchronization ->\n");
+	// Thread runs this loop until it is canceled
+	while (thread_continue) {
+		usleep(WAIT_TIME_IN_MICRO);
+		avg_interval = get_vblank_interval(pipe);
+		INFO("\t\tVBlank interval on pipe %d is %.4lf ms\n", pipe, avg_interval);
+	}
+	return NULL;
+}
 
 /**
  * @brief
@@ -43,7 +67,7 @@ void print_help(const char *program_name)
 {
 	PRINT("Usage: %s [-p pipe] [-d delta] [-s shift] [-v loglevel] [-h]\n"
 		"Options:\n"
-		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 4 All pipes)\n"
+		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 0)\n"
 		"  -d delta       Drift time in us to achieve (default: 1000 us) e.g 1000 us = 1.0 ms\n"
 		"  -s shift       PLL frequency change fraction (default: 0.1)\n"
 		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
@@ -63,11 +87,15 @@ void print_help(const char *program_name)
 int main(int argc, char *argv[])
 {
 	int ret = 0;
+	pthread_t tid;
+	int status;
+	double avg_interval;
+
 	INFO("Synctest Version: %s\n", get_version().c_str());
 
 	int delta = 1000;  //  Drift in us to achieve from current time
 	double shift = 0.01;
-	int pipe = ALL_PIPES;  // Default pipe# 4
+	int pipe = 0;  // Default pipe# 0
 	int opt;
 	while ((opt = getopt(argc, argv, "p:d:s:v:h")) != -1) {
 		switch (opt) {
@@ -100,9 +128,30 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	avg_interval = get_vblank_interval(pipe);
+	INFO("VBlank interval before starting synchronization: %lf ms\n", avg_interval);
+
+
+	// synchronize_vsync function is synchronous call and does not
+	// output any information. To enhance visibility, a thread is
+	// created for logging vblank intervals while synchronization is
+	// in progress.
+	status = pthread_create(&tid, NULL, background_task, &pipe);
+	if (status != 0) {
+		ERR("Cannot create thread");
+		return 1;
+	}
+
 	// Convert delta to milliseconds before calling
 	synchronize_vsync((double) delta / 1000.0, pipe, shift);
+	// Set flag to 0 to signal the thread to terminate
+	thread_continue = 0;
+	// Wait for the thread to terminate
+	pthread_join(tid, NULL);
+	avg_interval = get_vblank_interval(pipe);
+	INFO("VBlank interval after synchronization ends: %lf ms\n", avg_interval);
 
 	vsync_lib_uninit();
 	return ret;
 }
+

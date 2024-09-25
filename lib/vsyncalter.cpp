@@ -565,3 +565,28 @@ int get_vsync(long *vsync_array, int size, int pipe)
 	close_device();
 	return 0;
 }
+
+
+/**
+ * @brief
+ * This function collects vblank timestamps and prints average interval between them
+ *
+ * @param pipe
+ */
+double get_vblank_interval(int pipe)
+{
+	const int MAX_STAMPS=20;
+	long timestamps[MAX_STAMPS];
+
+	if (get_vsync(timestamps, MAX_STAMPS, pipe) == 0) {
+			long total_interval = 0;
+			for (int i = 0; i < MAX_STAMPS - 1; ++i) {
+					total_interval += (timestamps[i+1] - timestamps[i]);
+			}
+
+			double avg_interval =  total_interval / (MAX_STAMPS - 1) / 1000.0; // Convert to milliseconds
+			return avg_interval;
+	}
+	return 0.0;
+}
+

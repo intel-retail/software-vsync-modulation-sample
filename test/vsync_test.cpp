@@ -36,7 +36,7 @@ using namespace std;
 
 connection *server, *client;
 int client_done = 0;
-
+int thread_continue = 1;
 /**
 * @brief
 * This function closes the server's socket
@@ -194,6 +194,29 @@ int do_primary(const char *ptp_if)
 }
 
 /**
+ * @brief
+ * This function is the background thread task to call print_vblank_interval
+ *
+ * @param arg
+ * @return void*
+ */
+void* background_task(void *arg)
+{
+	const int WAIT_TIME_IN_MICRO = 1000*1000;  // 1 sec
+	double avg_interval;
+	int pipe = *(int*)arg;
+
+	INFO("VBlank interval during synchronization ->\n");
+	// Thread runs this loop until it is canceled
+	while (thread_continue) {
+		usleep(WAIT_TIME_IN_MICRO);
+		avg_interval = get_vblank_interval(pipe);
+		INFO("\tTime average of the vsyncs on pipe %d is %.4lf ms\n", pipe, avg_interval);
+	}
+	return NULL;
+}
+
+/**
 * @brief
 * This function takes all the actions of the secondary system
 * which are to initialize the client, receive the vsyncs from the server, send
@@ -225,6 +248,9 @@ int do_secondary(
 	long client_vsync[MAX_TIMESTAMPS], delta, avg;
 	long *va;
 	static int counter = 0;
+	pthread_t tid;
+	int status;
+	double avg_interval;
 
 	if(ptp_eth_address) {
 		client = new ptp_connection(server_name_or_ip_addr, ptp_eth_address);
@@ -315,7 +341,30 @@ int do_secondary(
 
 	if(synchronize) {
 		if(abs(delta) > synchronize) {
+			avg_interval = get_vblank_interval(pipe);
+			INFO("VBlank interval before starting synchronization: %lf ms\n", avg_interval);
+
+			thread_continue = 1;
+			// synchronize_vsync function is synchronous call and does not
+			// output any information. To enhance visibility, a thread is
+			// created for logging vblank intervals while synchronization is
+			// in progress.
+			status = pthread_create(&tid, NULL, background_task, &pipe);
+			if (status != 0) {
+				ERR("Cannot create thread");
+				return 1;
+			}
+
 			synchronize_vsync((double) delta / 1000, pipe, shift);
+
+			// Set flag to 0 to signal the thread to terminate
+			thread_continue = 0;
+			// Wait for the thread to terminate
+			pthread_join(tid, NULL);
+
+			avg_interval = get_vblank_interval(pipe);
+			INFO("VBlank interval after synchronization ends: %lf ms\n", avg_interval);
+
 			INFO("Synchronizing after %d seconds\n", counter);
 			counter = 0;
 		}
