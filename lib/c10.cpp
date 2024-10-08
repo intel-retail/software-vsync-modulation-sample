@@ -30,10 +30,6 @@
 #include "mmio.h"
 #include "c10.h"
 
-c10_phy_reg c10_table[] = {
-	{REG(PORT_CLOCK_CTL(0)), REG(TRANS_DDI_FUNC_CTL_A), REG(PORT_M2P_MSGBUS_CTL(0)), REG(_DDI_CLK_VALFREQ_A), INTEL_OUTPUT_UNUSED, 0, 1},
-	{REG(PORT_CLOCK_CTL(1)), REG(TRANS_DDI_FUNC_CTL_B), REG(PORT_M2P_MSGBUS_CTL(1)), REG(_DDI_CLK_VALFREQ_B), INTEL_OUTPUT_UNUSED, 0, 1},
-};
 
 /**
  * @brief
@@ -42,15 +38,30 @@ c10_phy_reg c10_table[] = {
  */
 c10::c10(ddi_sel *ds)
 {
+
+	/*
+	According to BSpecs, MTL and PTL DDIs for C10 correspond to ports A and B.
+	Consequently, it is reasonable to deduce the port number from de_clk as clk-1.
+	However, this assumption might not hold for future platforms, where it
+	may be necessary to derive the port number directly from register values.
+	For guidance on this approach, refer to combo.cpp.
+
+	BSpecs:
+	Port	Usage	  Capability	Alternate Names
+	DDI A |	Port A	| eDP, DP, HDMI	DDIA, Port A
+	DDI B |	Port B	| eDP, DP, HDMI	DDIB, Port B
+	*/
 	u32 port = ds->de_clk - 1;
 
 	int pll_state;
-	for(int i = 0; i < 20; i++) {
+	for(int i = 0; i < C10_PLL_REG_COUNT; i++) {
 		pll_state = __intel_cx0_read(port, 0, PHY_C10_VDR_PLL(i));
 		DBG("c10: pll_state[%d] = 0x%X, %d\n",i, pll_state,pll_state);
 	}
 
-	ds->phy_data = &c10_table[0];
+	c10_reg.done=1;
+	ds->phy_data = &c10_reg;
+
 	set_ds(ds);
 	set_init(true);
 
@@ -85,13 +96,13 @@ void c10::program_phy(double time_diff, double shift)
 	ddi_sel *ds = get_ds();
 	c10_phy_reg *c10_phy = (c10_phy_reg *) ds->phy_data;
 
-	int pll_state[20];
+	int pll_state[C10_PLL_REG_COUNT];
 	int mpll_frac_rem_15_0, mpll_frac_den_15_0, mpll_frac_quot_15_0, mpll_multiplier_11_0, ref_clk_mpll_div_2_0;
 	int pll_freq;
 
-	for(int i = 0; i < 20; i++) {
+	for(int i = 0; i < C10_PLL_REG_COUNT; i++) {
 		pll_state[i] = __intel_cx0_read(ds->de_clk - 1, 0, PHY_C10_VDR_PLL(i));
-		c10_phy->c10.pll_old[i]  = pll_state[i];
+		c10_phy->pll_state_old[i]  = pll_state[i];
 		DBG("c10: pll_state[%d] = 0x%X, %d\n", i, pll_state[i],pll_state[i]);
 	}
 
@@ -106,12 +117,12 @@ void c10::program_phy(double time_diff, double shift)
 	user_info *ui = new user_info(this, c10_phy);
 	make_timer((long) steps, ui, reset_phy_regs);
 
-	mpll_frac_den_15_0 = pll_state[10] << 8 | pll_state[9];
-	mpll_frac_quot_15_0 = pll_state[12] << 8 | pll_state[11];
-	mpll_frac_rem_15_0 = pll_state[14] << 8 | pll_state[13];
-	mpll_multiplier_11_0 = (REG_FIELD_GET8(C10_PLL3_MULTIPLIERH_MASK, pll_state[3]) << 8 |
+	mpll_frac_den_15_0 = pll_state[C10_PLL_REG_DEN_HIGH] << 8 | pll_state[C10_PLL_REG_DEN_LOW];
+	mpll_frac_quot_15_0 = pll_state[C10_PLL_REG_QUOT_HIGH] << 8 | pll_state[C10_PLL_REG_QUOT_LOW];
+	mpll_frac_rem_15_0 = pll_state[C10_PLL_REG_REM_HIGH] << 8 | pll_state[C10_PLL_REG_REM_LOW];
+	mpll_multiplier_11_0 = (REG_FIELD_GET8(C10_PLL3_MULTIPLIERH_MASK, pll_state[C10_PLL_REG_MULTIPLIER]) << 8 |
 			pll_state[2]) / 2 + 16;
-	ref_clk_mpll_div_2_0 = REG_FIELD_GET8(C10_PLL15_TXCLKDIV_MASK, pll_state[15]);
+	ref_clk_mpll_div_2_0 = REG_FIELD_GET8(C10_PLL15_TXCLKDIV_MASK, pll_state[C10_PLL_REG_TXCLKDIV]);
 
 	pll_freq = DIV_ROUND_CLOSEST_ULL(mul_u32_u32(REF_CLK_FREQ * 1000, (mpll_multiplier_11_0 << 16) + mpll_frac_quot_15_0) +
 			DIV_ROUND_CLOSEST(REF_CLK_FREQ * 1000 * mpll_frac_rem_15_0, mpll_frac_den_15_0),
@@ -123,16 +134,14 @@ void c10::program_phy(double time_diff, double shift)
 	temp /= (REF_CLK_FREQ * 1000);
 	temp -= (mpll_multiplier_11_0 << 16);
 	int new_mpll_frac_quot_15_0 = (int) temp;
-	pll_state[11] = new_mpll_frac_quot_15_0 & GENMASK(7, 0);
-	pll_state[12] =  new_mpll_frac_quot_15_0 >> 8;
+	c10_phy->pll_state[C10_PLL_REG_QUOT_LOW]  = new_mpll_frac_quot_15_0 & GENMASK(7, 0);
+	c10_phy->pll_state[C10_PLL_REG_QUOT_HIGH] =  new_mpll_frac_quot_15_0 >> 8;
 
 	DBG("Old Quotient = 0x%X\n", mpll_frac_quot_15_0);
 	DBG("Denominator = 0x%X\n", mpll_frac_den_15_0);
 	DBG("Remainder = 0x%X\n", mpll_frac_rem_15_0);
 	DBG("Multiplier = 0x%X\n", mpll_multiplier_11_0);
 
-	c10_phy->c10.pll[11] = pll_state[11];
-	c10_phy->c10.pll[12] = pll_state[12];
 	program_mmio(c10_phy, 1);
 }
 
@@ -235,8 +244,13 @@ void c10::program_mmio(c10_phy_reg *pr, int mod)
 			MB_WRITE_COMMITTED);
 
 
-	__intel_cx0_write(port, 0, PHY_C10_VDR_PLL(11), mod ? pr->c10.pll[11] : pr->c10.pll_old[11] , MB_WRITE_COMMITTED);
-	__intel_cx0_write(port, 0, PHY_C10_VDR_PLL(12), mod ? pr->c10.pll[12] : pr->c10.pll_old[12], MB_WRITE_COMMITTED);
+	__intel_cx0_write(port, 0, PHY_C10_VDR_PLL(C10_PLL_REG_QUOT_LOW),
+			mod ? pr->pll_state[C10_PLL_REG_QUOT_LOW] : pr->pll_state_old[C10_PLL_REG_QUOT_LOW],
+			MB_WRITE_COMMITTED);
+
+	__intel_cx0_write(port, 0, PHY_C10_VDR_PLL(C10_PLL_REG_QUOT_HIGH),
+			mod ? pr->pll_state[C10_PLL_REG_QUOT_HIGH] : pr->pll_state_old[C10_PLL_REG_QUOT_HIGH],
+			MB_WRITE_COMMITTED);
 
 	intel_cx0_rmw(port, INTEL_CX0_LANE0, PHY_C10_VDR_CONTROL(1),
 			0, C10_VDR_CTRL_MASTER_LANE | C10_VDR_CTRL_UPDATE_CFG,

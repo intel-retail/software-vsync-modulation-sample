@@ -388,23 +388,23 @@ enum intel_output_type {
 		(((__x) - ((__d) / 2)) / (__d));	\
 })
 
-struct intel_c10pll_state {
-	u32 clock; /* in KHz */
-	u8 tx;
-	u8 cmn;
-	u8 pll[20];
-	u8 pll_old[20];
-};
+#define C10_PLL_REG_COUNT 20
+#define C10_PLL_REG_QUOT_LOW  11
+#define C10_PLL_REG_QUOT_HIGH 12
+
+#define C10_PLL_REG_DEN_LOW  9
+#define C10_PLL_REG_DEN_HIGH 10
+
+#define C10_PLL_REG_REM_LOW  13
+#define C10_PLL_REG_REM_HIGH 14
+
+#define C10_PLL_REG_MULTIPLIER  3
+#define C10_PLL_REG_TXCLKDIV    15
 
 typedef struct _c10_phy_reg {
-	reg port_clk_ctl;
-	reg ddi_func_ctl;
-	reg port_m2p_msgbus_ctl;
-	reg clk_freq;
-	intel_output_type type;
-	int enabled;
 	int done;
-	struct intel_c10pll_state c10;
+	u8 pll_state[C10_PLL_REG_COUNT];
+	u8 pll_state_old[C10_PLL_REG_COUNT];
 } c10_phy_reg;
 
 class c10 : public phys {
@@ -417,6 +417,10 @@ public:
 	void reset_phy_regs(c10_phy_reg *dr);
 	void program_phy(double time_diff, double shift);
 	void wait_until_done();
+
+private:
+	c10_phy_reg c10_reg;
+
 
 private:
 	// Private Helper Methods
