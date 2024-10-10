@@ -292,7 +292,9 @@ void print_drm_info(void)
 	drmModeRes *resources = drmModeGetResources(fd);
 	if (!resources) {
 		ERR("drmModeGetResources failed: %s\n", strerror(errno));
-		close(fd);
+		if(close(fd) == -1){
+			ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+		}
 		return;
 	}
 	INFO("DRM Info:\n");
@@ -343,7 +345,9 @@ void print_drm_info(void)
 	}
 
 	drmModeFreeResources(resources);
-	close(fd);
+	if(close(fd) == -1){
+		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+	}
 }
 
 /**
