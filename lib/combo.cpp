@@ -121,16 +121,7 @@ void combo::program_phy(double time_diff, double shift)
 	ddi_sel *ds = get_ds();
 	combo_phy_reg *combo_phy = (combo_phy_reg *) ds->phy_data;
 
-#if TESTING
-	// ADL
-	/*
-	combo_phy->cfgcr0.orig_val = 0x01c001a5;
-	combo_phy->cfgcr1.orig_val = 0x013331cf;
-	*/
-	// TGL
-	combo_phy->cfgcr0.orig_val = 0x00B001B1;
-	combo_phy->cfgcr1.orig_val = 0x00000e84;
-#else
+
 	READ_VAL(cfgcr0, orig_val);
 	READ_VAL(cfgcr1, orig_val);
 
@@ -138,14 +129,9 @@ void combo::program_phy(double time_diff, double shift)
 		shift *= -1;
 	}
 
-	// For whichever PHY we find, let's set the done flag to 0 so that we can later
-	// have a timer for it to reset the default values back in their registers
-	combo_phy->done = 0;
 	int steps = CALC_STEPS_TO_SYNC(time_diff, shift);
 	DBG("steps are %d\n", steps);
-	user_info *ui = new user_info(this, combo_phy);
-	make_timer((long) steps, ui, reset_phy_regs);
-#endif
+
 	DBG("OLD VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
 			combo_phy->cfgcr0.addr, combo_phy->cfgcr0.orig_val,
 			combo_phy->cfgcr1.addr, combo_phy->cfgcr1.orig_val);
@@ -168,7 +154,12 @@ void combo::program_phy(double time_diff, double shift)
 	int ro_div_bias_int = i_fbdiv_intgr_9_0 >> 3;
 	double dco_divider = 4*((double) ro_div_bias_int + ((double) ro_div_bias_frac / pow(2,22)));
 	double dco_clock = 2 * REF_COMBO_FREQ * dco_divider;
-	double pll_freq = dco_clock / (5 * pdiv * qdiv * kdiv);
+	int deno = 5 * pdiv * qdiv * kdiv;
+	if (deno == 0) {
+		ERR("Denominator value zero causing divide by zero error.  Skipping synchronization\n");
+		return;
+	}
+	double pll_freq = dco_clock / deno;
 	double new_pll_freq = pll_freq + (shift * pll_freq / 100);
 	double new_dco_clock = dco_clock + (shift * dco_clock / 100);
 	double new_dco_divider = new_dco_clock / (2 * REF_COMBO_FREQ);
@@ -199,6 +190,13 @@ void combo::program_phy(double time_diff, double shift)
 
 	DBG("NEW VALUES\n cfgcr0 [0x%X] =\t 0x%X\n", combo_phy->cfgcr0.addr,
 	combo_phy->cfgcr0.mod_val);
+
+	// For whichever PHY we find, let's set the done flag to 0 so that we can later
+	// have a timer for it to reset the default values back in their registers
+	combo_phy->done = 0;
+	user_info *ui = new user_info(this, combo_phy);
+	make_timer((long) steps, ui, reset_phy_regs);
+
 	program_mmio(combo_phy, 1);
 }
 
@@ -244,10 +242,10 @@ void combo::wait_until_done()
 */
 void combo::program_mmio(combo_phy_reg *pr, int mod)
 {
-#if !TESTING
+
 	WRITE_OFFSET_DWORD(pr->cfgcr0.addr,
 			mod ? pr->cfgcr0.mod_val : pr->cfgcr0.orig_val);
-#endif
+
 }
 
 /**

@@ -29,7 +29,6 @@
 
 using namespace std;
 
-#define TESTING                       0
 #define SHIFT                         (0.1)
 #define REF_COMBO_FREQ                19.2
 #define REF_CLK_FREQ                  38.4

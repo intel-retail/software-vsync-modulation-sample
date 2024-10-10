@@ -106,7 +106,7 @@ void c10::program_phy(double time_diff, double shift)
 		DBG("c10: pll_state[%d] = 0x%X, %d\n", i, pll_state[i],pll_state[i]);
 	}
 
-	c10_phy->done =0;
+
 
 	if(time_diff < 0) {
 		shift *= -1;
@@ -114,8 +114,6 @@ void c10::program_phy(double time_diff, double shift)
 
 	int steps = CALC_STEPS_TO_SYNC(time_diff, shift);
 	DBG("steps are %d\n", steps);
-	user_info *ui = new user_info(this, c10_phy);
-	make_timer((long) steps, ui, reset_phy_regs);
 
 	mpll_frac_den_15_0 = pll_state[C10_PLL_REG_DEN_HIGH] << 8 | pll_state[C10_PLL_REG_DEN_LOW];
 	mpll_frac_quot_15_0 = pll_state[C10_PLL_REG_QUOT_HIGH] << 8 | pll_state[C10_PLL_REG_QUOT_LOW];
@@ -132,7 +130,7 @@ void c10::program_phy(double time_diff, double shift)
 	unsigned long long temp = new_pll_freq * (10 << (ref_clk_mpll_div_2_0 + 16));
 	temp -= DIV_ROUND_CLOSEST(REF_CLK_FREQ * 1000 * mpll_frac_rem_15_0, mpll_frac_den_15_0);
 	temp /= (REF_CLK_FREQ * 1000);
-	temp -= (mpll_multiplier_11_0 << 16);
+	temp -= ((unsigned long long)mpll_multiplier_11_0 << 16);
 	int new_mpll_frac_quot_15_0 = (int) temp;
 	c10_phy->pll_state[C10_PLL_REG_QUOT_LOW]  = new_mpll_frac_quot_15_0 & GENMASK(7, 0);
 	c10_phy->pll_state[C10_PLL_REG_QUOT_HIGH] =  new_mpll_frac_quot_15_0 >> 8;
@@ -141,6 +139,10 @@ void c10::program_phy(double time_diff, double shift)
 	DBG("Denominator = 0x%X\n", mpll_frac_den_15_0);
 	DBG("Remainder = 0x%X\n", mpll_frac_rem_15_0);
 	DBG("Multiplier = 0x%X\n", mpll_multiplier_11_0);
+
+	c10_phy->done = 0;
+	user_info *ui = new user_info(this, c10_phy);
+	make_timer((long) steps, ui, reset_phy_regs);
 
 	program_mmio(c10_phy, 1);
 }
