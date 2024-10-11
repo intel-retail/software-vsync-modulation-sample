@@ -76,7 +76,7 @@ int phys::make_timer(long expire_ms, void *user_ptr, reset_func reset)
 	struct sigaction        sa;
 	int                     sig_no = SIGRTMIN;
 
-
+	INFO("Setting timer for %d ms\n", expire_ms);
 	// Set up signal handler
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = reset;
