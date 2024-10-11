@@ -42,8 +42,15 @@
 # The script will wait for the user to press any key before terminating all four processes on both
 # primary and secondary machines.
 
-# TIP: Use this command to check which network card support ptp
-# ls /sys/class/net/*/device/ptp*
+# TIPS:
+# Use this command to check which network card support ptp
+#    $ ls /sys/class/net/*/device/ptp*
+#
+# Manually setting system and PTP time to different values. These commands are for testing purposes only.
+# Set the system date and time:
+#    $ sudo date --set="yyyy-mm-dd hh:mm:ss"
+# Set the PTP time (number of seconds since 1970):
+#    $ sudo phc_ctl /dev/ptp0 set 10000000000
 
 # Determine the directory of the currently executing script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -64,6 +71,10 @@ ssh $SECONDARY_ADDRESS "$SUDO timedatectl set-ntp no"
 
 # timedatectl set-ntp no
 
+# Ensure the directory on secondary exists
+ssh $SECONDARY_ADDRESS "mkdir -p $CLIENT_DIR"
+
+# Copy config file to secondary system
 scp "$PRIMARY_PROJ_PATH/resources/gPTP.cfg" "$SECONDARY_ADDRESS:$CLIENT_DIR/" 2>/dev/null
 
 echo "PRIMARY Commands:"
@@ -90,11 +101,14 @@ echo ""
 SECONDARY_COMMANDS_PHC="$SUDO $COMMAND &"
 
 # First sync Primary PTP clock with it's system clock
-eval $PRIMARY_COMMANDS_PHC
-sleep 2
-
 eval $PRIMARY_COMMANDS_PTP
-sleep 2
+# Give some time for ptp4l to start
+sleep 4
+
+eval $PRIMARY_COMMANDS_PHC
+echo "Waiting on Primary to sync PTP with real time clock"
+# 10 second are enough.  Adjust accordingly
+sleep 10
 
 # Wakeup remote screen (Uncomment if want to wake up PC via ssh at regular interval of 5 sec)
 #watch -n 5 ssh $SECONDARY_ADDRESS dbus-send --type=method_call --dest=org.gnome.ScreenSaver /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false &
@@ -102,8 +116,10 @@ sleep 2
 # Run commands on the secondary machine via SSH
 echo "Running commands on the secondary machine..."
 ssh $SECONDARY_ADDRESS "$SECONDARY_COMMANDS_PTP" 2>&1 | tee  $LOG_DIR$SECONDARY_LOG_PTP  &
-sleep 2
+# Give some time for ptp4l on secondary to sysncup with primary
+sleep 10
 
+# Now start syncing real time clock on secondary with it's PTP clock
 ssh $SECONDARY_ADDRESS "$SECONDARY_COMMANDS_PHC" 2>&1 | tee  $LOG_DIR$SECONDARY_LOG_PHC  &
 
 # Define cleanup function
