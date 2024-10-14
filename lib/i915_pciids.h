@@ -73,6 +73,14 @@
     0x46C2, \
     0x46C3
 
+#define INTEL_ADL_N_IDS \
+    0x46D0, \
+    0x46D1
+
+#define INTEL_TWL_IDS \
+    0x46D3, \
+    0x46D4
+
 #define INTEL_RPL_P_IDS \
     0xA7A0, \
     0xA7A0, \
@@ -97,8 +105,10 @@
 
 #define INTEL_ADL_P_FAM_IDS \
     INTEL_ADL_P_IDS, \
+    INTEL_ADL_N_IDS, \
     INTEL_RPL_P_IDS, \
-    INTEL_RPL_H_IDS
+    INTEL_RPL_H_IDS, \
+    INTEL_TWL_IDS
 
 #define INTEL_ADL_S_FAM_IDS \
     INTEL_ADL_S_IDS, \
