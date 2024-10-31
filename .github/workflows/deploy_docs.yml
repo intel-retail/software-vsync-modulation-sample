@@ -65,6 +65,9 @@ jobs:
           git fetch origin gh-pages
           git checkout -b gh-pages origin/gh-pages
 
+          # Debugging: Verify git configuration again
+          git config --list
+
           # Copy the generated documentation to the gh-pages directory
           VERSION=${{ env.VERSION }}
           FOLDER_NAME="docs/$VERSION"
