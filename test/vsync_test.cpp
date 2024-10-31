@@ -36,28 +36,7 @@ using namespace std;
 
 connection *server, *client;
 int client_done = 0;
-
-/**
-* @brief
-* Prints the usage of the program
-* @param None
-* @return void
-*/
-void usage()
-{
-	PRINT("Vsynctest Version: %s\n", get_version().c_str());
-	PRINT("\nUsage: vsync_test pri/sec [primary's_name_or_ip_addr] [primary's PTP eth addr] [sync after # us]\n");
-	PRINT("pri = This is the primary system and it needs to share its vsync with others\n");
-	PRINT("sec = This is the secondary system. More than one systems can be secondary.\n");
-	PRINT("\tIt will synchronize it's vsync to start with primary\n");
-	PRINT("primary's_name_or_ip_addr = Only needed for secondary systems. This is the primary\n");
-	PRINT("\tsystem's hostname or IP address so that secondary system can communicate with it\n");
-	PRINT("\tNote that if you using PTP, then this is the primary's PTP interface (ex:enp176s0)\n");
-	PRINT("primary's_ptp_eth_addr = Only needed for secondary systems. If we are using PTP\n");
-	PRINT("protocol, then this is the primary system's PTP interface's ethernet address\n");
-	PRINT("(ex:84:47:09:04:eb:0e)\n");
-}
-
+int thread_continue = 1;
 /**
 * @brief
 * This function closes the server's socket
@@ -83,6 +62,10 @@ void server_close_signal(int sig)
 void client_close_signal(int sig)
 {
 	DBG("Closing client's socket\n");
+
+	// Inform vsync lib about Ctrl+C signal
+	shutdown_lib();
+
 	client_done = 1;
 }
 
@@ -179,7 +162,7 @@ int do_msg(int new_sockfd)
 * - 0 = SUCCESS
 * - 1 = FAILURE
 */
-int do_primary(char *ptp_if)
+int do_primary(const char *ptp_if)
 {
 	if(ptp_if) {
 		server = new ptp_connection(ptp_if);
@@ -211,6 +194,29 @@ int do_primary(char *ptp_if)
 }
 
 /**
+ * @brief
+ * This function is the background thread task to call print_vblank_interval
+ *
+ * @param arg
+ * @return void*
+ */
+void* background_task(void *arg)
+{
+	const int WAIT_TIME_IN_MICRO = 1000*1000;  // 1 sec
+	double avg_interval;
+	int pipe = *(int*)arg;
+
+	INFO("VBlank interval during synchronization ->\n");
+	// Thread runs this loop until it is canceled
+	while (thread_continue) {
+		usleep(WAIT_TIME_IN_MICRO);
+		avg_interval = get_vblank_interval(pipe);
+		INFO("\tTime average of the vsyncs on pipe %d is %.4lf ms\n", pipe, avg_interval);
+	}
+	return NULL;
+}
+
+/**
 * @brief
 * This function takes all the actions of the secondary system
 * which are to initialize the client, receive the vsyncs from the server, send
@@ -230,16 +236,21 @@ int do_primary(char *ptp_if)
 * - 1 = FAILURE
 */
 int do_secondary(
-	char *server_name_or_ip_addr,
-	char *ptp_eth_address,
+	const char *server_name_or_ip_addr,
+	const char *ptp_eth_address,
+	int pipe,
 	int synchronize,
-	int timestamps)
+	int timestamps,
+	double shift)
 {
 	msg m, r;
 	int ret = 0;
 	long client_vsync[MAX_TIMESTAMPS], delta, avg;
 	long *va;
 	static int counter = 0;
+	pthread_t tid;
+	int status;
+	double avg_interval;
 
 	if(ptp_eth_address) {
 		client = new ptp_connection(server_name_or_ip_addr, ptp_eth_address);
@@ -330,7 +341,30 @@ int do_secondary(
 
 	if(synchronize) {
 		if(abs(delta) > synchronize) {
-			synchronize_vsync((double) delta / 1000 );
+			avg_interval = get_vblank_interval(pipe);
+			INFO("VBlank interval before starting synchronization: %lf ms\n", avg_interval);
+
+			thread_continue = 1;
+			// synchronize_vsync function is synchronous call and does not
+			// output any information. To enhance visibility, a thread is
+			// created for logging vblank intervals while synchronization is
+			// in progress.
+			status = pthread_create(&tid, NULL, background_task, &pipe);
+			if (status != 0) {
+				ERR("Cannot create thread");
+				return 1;
+			}
+
+			synchronize_vsync((double) delta / 1000, pipe, shift);
+
+			// Set flag to 0 to signal the thread to terminate
+			thread_continue = 0;
+			// Wait for the thread to terminate
+			pthread_join(tid, NULL);
+
+			avg_interval = get_vblank_interval(pipe);
+			INFO("VBlank interval after synchronization ends: %lf ms\n", avg_interval);
+
 			INFO("Synchronizing after %d seconds\n", counter);
 			counter = 0;
 		}
@@ -347,6 +381,29 @@ int do_secondary(
 }
 
 /**
+ * @brief
+ * Print help message
+ *
+ * @param program_name - Name of the program
+ * @return void
+ */
+void print_help(const char *program_name)
+{
+	PRINT("Usage: %s [-m mode] [-i interface] [-c mac_address] [-d delta] [-p pipe] [-s shift] [-v loglevel] [-h]\n"
+		"Options:\n"
+		"  -m mode        Mode of operation: pri, sec (default: pri)\n"
+		"  -i interface   Network interface to listen on (primary) or connect to (secondary) (default: 127.0.0.1)\n"
+		"  -c mac_address MAC address of the network interface to connect to. Applicable to ethernet interface mode only.\n"
+		"  -d delta       Drift time in microseconds to allow before pll reprogramming (default: 100 us)\n"
+		"  -p pipe        Pipe to get stamps for.  4 (all) or 0,1,2 ... (default: 0)\n"
+		"  -s shift       PLL frequency change fraction (default: 0.1)\n"
+		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
+		"  -h             Display this help message\n",
+		program_name);
+
+}
+
+/**
 * @brief
 * This is the main function
 * @param argc - The number of command line arguments
@@ -357,51 +414,93 @@ int do_secondary(
 */
 int main(int argc, char *argv[])
 {
-	int ret = 0, us_synchronize, timestamps = MAX_TIMESTAMPS;
-	if(!(((argc == 2 || argc == 3) && !strncasecmp(argv[1], "pri", 3)) ||
-		((argc == 3  || argc == 4 || argc == 5) && !strncasecmp(argv[1], "sec", 3))) ||
-		(argc < 2 || argc > 5)) {
-		ERR("Invalid parameters\n");
-		usage();
-		return 1;
+	int ret = 0;
+	std::string modeStr = "pri";
+	std::string log_level = "info";
+	std::string interface_or_ip = "";  // Default to localhost
+	std::string mac_address = "";
+	int timestamps = MAX_TIMESTAMPS;
+	int pipe = 0;  // Default pipe# 0
+	int opt, delta = 100;
+	double shift = 0.01;
+	while ((opt = getopt(argc, argv, "m:i:c:p:t:d:s:v:h")) != -1) {
+		switch (opt) {
+			case 'm':
+				modeStr = optarg;
+				break;
+			case 'i':
+				interface_or_ip = optarg;
+				break;
+			case 'c':
+				mac_address = optarg;
+				break;
+			case 'p':
+				pipe = std::stoi(optarg);
+				break;
+			case 't':
+				timestamps = std::stoi(optarg);
+				break;
+			case 'd':
+				delta = std::stoi(optarg);
+				break;
+			case 's':
+				shift = std::stod(optarg);
+				break;
+			case 'v':
+				log_level = optarg;
+				set_log_level(optarg);
+				break;
+			case 'h':
+			case '?':
+				if (optopt == 'm' || optopt == 'i' || optopt == 'c' || optopt == 'p' ||
+					optopt == 'i' || optopt == 't' || optopt == 'd' || optopt == 's' ||
+					optopt == 'v') {
+					ERR("Option -%c requires an argument.\n", char(optopt));
+				} else {
+					ERR("Unknown option: -%c\n", char(optopt));
+				}
+				print_help(argv[0]);
+				exit(EXIT_FAILURE);
+		}
 	}
+
+	if (modeStr == "pri") {
+		set_log_mode("[ PRIMARY ]");
+	} else if (modeStr == "sec") {
+		set_log_mode("[SECONDARY]");
+	}
+
+	// Print configurations
+	INFO("Configuration:\n");
+	INFO("\tMode: %s\n", modeStr.c_str());
+	INFO("\tInterface or IP: %s\n", interface_or_ip.length() > 0 ? interface_or_ip.c_str() : "N/A");
+	INFO("\tSec Mac Address: %s\n", mac_address.length() > 0 ? mac_address.c_str() : "N/A");
+	INFO("\tDelta: %d us\n", delta);
+	INFO("\tShift: %.3lf\n", shift);
+	INFO("\tPipe ID: %d\n", pipe);
+	INFO("\tLog Level: %s\n", log_level.c_str());
 
 	if(vsync_lib_init()) {
 		ERR("Couldn't initialize vsync lib\n");
 		return 1;
 	}
 
-	if(!strncasecmp(argv[1], "pri", 3)) {
-		ret = do_primary(argc == 3 ? argv[2] : NULL);
-	} else if(!strncasecmp(argv[1], "sec", 3)) {
+	if(!modeStr.compare("pri")) {
+		ret = do_primary(interface_or_ip.length() > 0 ? interface_or_ip.c_str() : NULL);
+	} else if(!modeStr.compare("sec")) {
 
 		signal(SIGINT, client_close_signal);
 		signal(SIGTERM, client_close_signal);
 
-		switch(argc) {
-			case 3:
-				ret = do_secondary(argv[2], NULL, 1, MAX_TIMESTAMPS);
-			break;
-			case 4:
-				if(strchr(argv[3], ':')) {
-					ret = do_secondary(argv[2], argv[3], 1, MAX_TIMESTAMPS);
-				} else {
-					ret = do_secondary(argv[2], NULL, atoi(argv[3]), MAX_TIMESTAMPS);
-				}
-			break;
-			case 5:
-				us_synchronize = atoi(argv[4]);
+		// Keep doing synchronization until the user Ctrl+C's out
+		do {
+				ret = do_secondary(interface_or_ip.c_str(),
+					mac_address.length() > 0 ? mac_address.c_str() : NULL,
+					pipe, delta, timestamps, shift);
 
-				do {
-					ret = do_secondary(argv[2], argv[3], us_synchronize, timestamps);
-
-					if(us_synchronize != 0 && us_synchronize != 1) {
-						timestamps = 2;
-						sleep(1);
-					}
-				} while(us_synchronize != 0 && us_synchronize != 1 && !client_done && !ret);
-			break;
-		}
+				timestamps = 2;
+				sleep(1);
+		} while(!client_done && !ret);
 	}
 
 	if(client) {

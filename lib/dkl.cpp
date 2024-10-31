@@ -76,19 +76,12 @@ dkl::dkl(ddi_sel *ds, int first_dkl_phy_loc)
 * @param *t - A pointer to a pointer where we need to store the timer
 * @return void
 */
-void dkl::program_phy(double time_diff)
+void dkl::program_phy(double time_diff, double shift)
 {
-	double shift = SHIFT;
 	ddi_sel *ds = get_ds();
 	dkl_phy_reg *dkl_phy = (dkl_phy_reg *) ds->phy_data;
 
-#if TESTING
-	dkl_phy->dkl_pll_div0.orig_val = 0x50284274;
-	dkl_phy->dkl_visa_serializer.orig_val = 0x54321000;
-	dkl_phy->dkl_bias.orig_val = 0XC1000000;
-	dkl_phy->dkl_ssc.orig_val = 0x400020ff;
-	dkl_phy->dkl_dco.orig_val = 0xe4004080;
-#else
+
 	dkl_phy->dkl_pll_div0.orig_val         = dkl_phy->dkl_pll_div0.mod_val        = READ_OFFSET_DWORD(dkl_phy->dkl_pll_div0.addr);
 
 	/*
@@ -112,16 +105,14 @@ void dkl::program_phy(double time_diff)
 	dkl_phy->dkl_dco.orig_val              = dkl_phy->dkl_dco.mod_val             = READ_OFFSET_DWORD(dkl_phy->dkl_dco.addr);
 	// For whichever PHY we find, let's set the done flag to 0 so that we can later
 	// have a timer for it to reset the default values back in their registers
-	dkl_phy->done = 0;
+
 
 	if(time_diff < 0) {
 		shift *= -1;
 	}
 	int steps = CALC_STEPS_TO_SYNC(time_diff, shift);
 	DBG("steps are %d\n", steps);
-	user_info *ui = new user_info(this, dkl_phy);
-	make_timer((long) steps, ui, reset_phy_regs);
-#endif
+
 	DBG("OLD VALUES\n dkl_pll_div0 [0x%X] =\t 0x%X\n dkl_visa_serializer [0x%X] =\t 0x%X\n "
 			"dkl_bias [0x%X] =\t 0x%X\n dkl_ssc [0x%X] =\t 0x%X\n dkl_dco [0x%X] =\t 0x%X\n",
 			dkl_phy->dkl_pll_div0.addr,
@@ -140,15 +131,15 @@ void dkl::program_phy(double time_diff)
 	int i_fbprediv_3_0    = GETBITS_VAL(dkl_phy->dkl_pll_div0.orig_val, 11, 8);
 	int i_fbdiv_intgr_7_0 = GETBITS_VAL(dkl_phy->dkl_pll_div0.orig_val, 7, 0);
 	int i_fbdivfrac_21_0  = GETBITS_VAL(dkl_phy->dkl_bias.orig_val, 29, 8);
-	double pll_freq = (double) (REF_DKL_FREQ * i_fbprediv_3_0 * (i_fbdiv_intgr_7_0 + i_fbdivfrac_21_0 / pow(2, 22)));
+	double pll_freq = (double) (REF_CLK_FREQ * i_fbprediv_3_0 * (i_fbdiv_intgr_7_0 + i_fbdivfrac_21_0 / pow(2, 22)));
 	double new_pll_freq = pll_freq + (shift * pll_freq / 100);
-	double new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_DKL_FREQ * i_fbprediv_3_0)) - i_fbdiv_intgr_7_0) * pow(2,22);
+	double new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_CLK_FREQ * i_fbprediv_3_0)) - i_fbdiv_intgr_7_0) * pow(2,22);
 
 	if(new_i_fbdivfrac_21_0 < 0) {
 		i_fbdiv_intgr_7_0 -= 1;
 		dkl_phy->dkl_pll_div0.mod_val &= ~GENMASK(7, 0);
 		dkl_phy->dkl_pll_div0.mod_val |= i_fbdiv_intgr_7_0;
-		new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_DKL_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
+		new_i_fbdivfrac_21_0 = ((new_pll_freq / (REF_CLK_FREQ * i_fbprediv_3_0)) - (i_fbdiv_intgr_7_0)) * pow(2,22);
 	}
 
 	DBG("old pll_freq \t %f\n", pll_freq);
@@ -178,6 +169,11 @@ void dkl::program_phy(double time_diff)
 			dkl_phy->dkl_ssc.mod_val,
 			dkl_phy->dkl_dco.addr,
 			dkl_phy->dkl_dco.mod_val);
+
+	dkl_phy->done = 0;
+	user_info *ui = new user_info(this, dkl_phy);
+	make_timer((long) steps, ui, reset_phy_regs);
+
 	program_mmio(dkl_phy, 1);
 }
 
@@ -195,9 +191,15 @@ void dkl::wait_until_done()
 	ddi_sel *ds = get_ds();
 	dkl_phy_reg *dkl_phy = (dkl_phy_reg *) ds->phy_data;
 
-	while(!dkl_phy->done) {
+	while(!dkl_phy->done && !lib_client_done) {
 		usleep(1000);
 	}
+
+	// Restore original values in case of app termination
+	if (lib_client_done) {
+		reset_phy_regs(dkl_phy);
+	}
+
 	timer_delete(get_timer());
 }
 
@@ -215,7 +217,6 @@ void dkl::wait_until_done()
 */
 void dkl::program_mmio(dkl_phy_reg *pr, int mod)
 {
-#if !TESTING
 	/*
 	 * Each Dekel PHY is addressed through a 4KB aperture. Each PHY has more than
 	 * 4KB of register space, so a separate index is programmed in HIP_INDEX_REG0
@@ -240,7 +241,6 @@ void dkl::program_mmio(dkl_phy_reg *pr, int mod)
 			mod ? pr->dkl_ssc.mod_val : pr->dkl_ssc.orig_val);
 	WRITE_OFFSET_DWORD(pr->dkl_dco.addr,
 			mod ? pr->dkl_dco.mod_val  : pr->dkl_dco.orig_val);
-#endif
 }
 
 /*
@@ -269,7 +269,13 @@ void dkl::reset_phy_regs(int sig, siginfo_t *si, void *uc)
 	dkl_phy_reg *dr = (dkl_phy_reg *) ui->get_reg();
 	dkl *d = (dkl *) ui->get_type();
 
-	d->program_mmio(dr, 0);
+	d->reset_phy_regs(dr);
+	delete ui;
+}
+
+void dkl::reset_phy_regs(dkl_phy_reg *dr)
+{
+	program_mmio(dr, 0);
 	DBG("DEFAULT VALUES\n dkl_pll_div0 [0x%X] =\t 0x%X\n dkl_visa_serializer [0x%X] =\t 0x%X\n "
 			"dkl_bias [0x%X] =\t 0x%X\n dkl_ssc [0x%X] =\t 0x%X\n dkl_dco [0x%X] =\t 0x%X\n",
 			dr->dkl_pll_div0.addr,
@@ -283,5 +289,4 @@ void dkl::reset_phy_regs(int sig, siginfo_t *si, void *uc)
 			dr->dkl_dco.addr,
 			dr->dkl_dco.orig_val);
 	dr->done = 1;
-	delete ui;
 }

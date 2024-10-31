@@ -36,24 +36,29 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <xf86drm.h>
+#include <xf86drmMode.h>
 #include <tgl.h>
 #include <adl_s.h>
 #include <adl_p.h>
+#include <mtl.h>
 #include "mmio.h"
 #include "dkl.h"
 #include "combo.h"
+#include "c10.h"
 #include "i915_pciids.h"
 
 platform platform_table[] = {
-	{"TGL",   {INTEL_TGL_IDS},  tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel), 4},
-	{"ADL_S_FAM", {INTEL_ADLS_FAM_IDS}, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
-	{"ADL_P_FAM", {INTEL_ADLP_FAM_IDS}, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
+	{"TGL",       {INTEL_TGL_IDS},       tgl_ddi_sel,   ARRAY_SIZE(tgl_ddi_sel),   4},
+	{"ADL_S_FAM", {INTEL_ADL_S_FAM_IDS}, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
+	{"ADL_P_FAM", {INTEL_ADL_P_FAM_IDS}, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
+	{"MTL",       {INTEL_MTL_FAM_IDS},   mtl_ddi_sel,   ARRAY_SIZE(mtl_ddi_sel),   0},
 };
 
 int g_dev_fd = 0;
 int supported_platform = 0;
 list<phys *> *phy_enabled_list = NULL;
 
+int lib_client_done = 0;
 /**
 * @brief
 *	This function creates a timer.
@@ -71,7 +76,7 @@ int phys::make_timer(long expire_ms, void *user_ptr, reset_func reset)
 	struct sigaction        sa;
 	int                     sig_no = SIGRTMIN;
 
-
+	INFO("Setting timer for %d ms\n", expire_ms);
 	// Set up signal handler
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = reset;
@@ -131,7 +136,6 @@ int find_enabled_phys()
 		REG(TRANS_DDI_FUNC_CTL_C),
 		REG(TRANS_DDI_FUNC_CTL_D),
 	};
-	phys *new_phy;
 
 	// According to the BSpec:
 	// 0000b	None
@@ -164,10 +168,13 @@ int find_enabled_phys()
 			continue;
 		}
 
+
 		// TRANS_DDI_FUNC_CTL bits 30:27 have the DDI which this pipe is connected to
 		ddi_select = GETBITS_VAL(val, 30, 27);
 		DBG("ddi_select = 0x%X\n", ddi_select);
 		for(j = 0; j < platform_table[supported_platform].ds_size; j++) {
+
+			phys *new_phy = NULL;
 			// Match the DDI with the available ones on this platform
 			if(platform_table[supported_platform].ds[j].de_clk == ddi_select) {
 				switch(platform_table[supported_platform].ds[j].phy) {
@@ -175,15 +182,27 @@ int find_enabled_phys()
 						DBG("Detected a DKL phy on pipe %d\n", i+1);
 						new_phy = new dkl(&platform_table[supported_platform].ds[j],
 							platform_table[supported_platform].first_dkl_phy_loc);
-					break;
+						break;
 					case COMBO:
 						DBG("Detected a Combo phy on pipe %d\n", i+1);
 						new_phy = new combo(&platform_table[supported_platform].ds[j]);
-					break;
+						break;
+					case C10:
+						DBG("Detected a C10 phy on pipe %d\n", i+1);
+						new_phy = new c10(&platform_table[supported_platform].ds[j]);
+						break;
+					case C20:
+						DBG("Detected a C20 phy on pipe %d. (Not implemented)\n", i+1);
+						break;
 					default:
 						ERR("Unsupported PHY. Phy is %d\n", platform_table[supported_platform].ds[j].phy);
 						return 1;
-					break;
+						break;
+				}
+
+				// Ignore PHYs that we don't support yet
+				if (new_phy == NULL) {
+					continue;
 				}
 				if(!new_phy->is_init()) {
 					ERR("PHY not initialized properly\n");
@@ -221,6 +240,118 @@ void cleanup_phy_list()
 
 /**
 * @brief
+* Sets a global flag to indicate client app termination via Ctrl+C
+* @param None
+* @return void
+*/
+void shutdown_lib(void)
+{
+	lib_client_done = 1;
+}
+
+/**
+* @brief
+* Prints the DRM information.	Loops through all CRTCs and Connectors and prints
+* their information.
+* @param None
+* @return void
+*/
+void print_drm_info(void)
+{
+	// This list covers most of the connector types that are supported by the DRM
+	const char* connector_type_str[] = {
+		"Unknown",      // 0
+		"VGA",          // 1
+		"DVI-I",        // 2
+		"DVI-D",        // 3
+		"DVI-A",        // 4
+		"Composite",    // 5
+		"S-Video",      // 6
+		"LVDS",         // 7
+		"Component",    // 8
+		"9PinDIN",      // 9
+		"DisplayPort",  // 10
+		"HDMI-A",       // 11
+		"HDMI-B",       // 12
+		"TV",           // 13
+		"eDP",          // 14
+		"Virtual",      // 15
+		"DSI",          // 16
+		"DPI",          // 17
+		"WriteBack",    // 18
+		"SPI",          // 19
+		"USB"           // 20
+	};
+
+	int fd = open_device();
+	if (fd < 0) {
+		ERR("Failed to open DRM device: %s\n", strerror(errno));
+		return ;
+	}
+
+	drmModeRes *resources = drmModeGetResources(fd);
+	if (!resources) {
+		ERR("drmModeGetResources failed: %s\n", strerror(errno));
+		if(close(fd) == -1){
+			ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+		}
+		return;
+	}
+	INFO("DRM Info:\n");
+
+	// First print Pipe/CRTC info
+	INFO("  CRTCs found: %d\n", resources->count_crtcs);
+	for (int i = 0; i < resources->count_crtcs; i++) {
+		drmModeCrtc *crtc = drmModeGetCrtc(fd, resources->crtcs[i]);
+		if (!crtc) {
+			ERR("drmModeGetCrtc failed: %s\n", strerror(errno));
+			continue;
+		}
+
+		double refresh_rate = 0;
+		if (crtc->mode_valid) {
+			refresh_rate = (double)crtc->mode.clock * 1000.0 / (crtc->mode.vtotal * crtc->mode.htotal);
+		}
+
+		INFO("  \tPipe: %2d, CRTC ID: %4d, Mode Valid: %3s, Mode Name: %s, Position: (%4d, %4d), Resolution: %4dx%-4d, Refresh Rate: %.2f Hz\n",
+			   i, crtc->crtc_id, (crtc->mode_valid) ? "Yes" : "No", crtc->mode.name,
+				crtc->x, crtc->y, crtc->mode.hdisplay, crtc->mode.vdisplay, refresh_rate);
+
+		drmModeFreeCrtc(crtc);
+	}
+
+	// Print Connector info
+	INFO("  Connectors found: %d\n", resources->count_connectors);
+	for (int i = 0; i < resources->count_connectors; i++) {
+		drmModeConnector *connector = drmModeGetConnector(fd, resources->connectors[i]);
+		if (!connector) {
+			ERR("drmModeGetConnector failed: %s\n", strerror(errno));
+			continue;
+		}
+
+		INFO("  \tConnector: %-4d (ID: %-4d), Type: %-4d (%-12s), Type ID: %-4d, Connection: %-12s\n",
+				i, connector->connector_id, connector->connector_type, connector_type_str[connector->connector_type],
+				connector->connector_type_id,
+				(connector->connection == DRM_MODE_CONNECTED) ? "Connected" : "Disconnected");
+
+		if (connector->connection == DRM_MODE_CONNECTED) {
+			drmModeEncoder *encoder = drmModeGetEncoder(fd, connector->encoder_id);
+			if (encoder) {
+				INFO("\t\t\tEncoder ID: %d, CRTC ID: %d\n", encoder->encoder_id, encoder->crtc_id);
+				drmModeFreeEncoder(encoder);
+			}
+		}
+		drmModeFreeConnector(connector);
+	}
+
+	drmModeFreeResources(resources);
+	if(close(fd) == -1){
+		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+	}
+}
+
+/**
+* @brief
 * This function initializes the library. It must be called
 * ahead of all other functions because it opens device, maps MMIO space and
 * initializes any key global variables.
@@ -233,6 +364,9 @@ int vsync_lib_init()
 {
 	int device_id, i, j;
 	if(!IS_INIT()) {
+		// Show Pipe and CRTC info
+		print_drm_info();
+
 		// Get the device id of this platform
 		device_id = get_device_id();
 		DBG("Device id is 0x%X\n", device_id);
@@ -301,7 +435,7 @@ void vsync_lib_uninit()
 * ALL_PIPES as the value, then all pipes will be synchronized.
 * @return void
 */
-void synchronize_vsync(double time_diff, int pipe)
+void synchronize_vsync(double time_diff, int pipe, double shift)
 {
 	if(!IS_INIT()) {
 		ERR("Uninitialized lib, please call lib init first\n");
@@ -313,7 +447,8 @@ void synchronize_vsync(double time_diff, int pipe)
 			it != phy_enabled_list->end(); it++) {
 				if(pipe == ALL_PIPES || pipe == (*it)->get_pipe()) {
 					// Program the phy
-					(*it)->program_phy(time_diff);
+					(*it)->program_phy(time_diff, shift);
+
 					// Wait until it is done before moving on to the next phy
 					(*it)->wait_until_done();
 				}
@@ -452,3 +587,28 @@ int get_vsync(long *vsync_array, int size, int pipe)
 	close_device();
 	return 0;
 }
+
+
+/**
+ * @brief
+ * This function collects vblank timestamps and prints average interval between them
+ *
+ * @param pipe
+ */
+double get_vblank_interval(int pipe)
+{
+	const int MAX_STAMPS=20;
+	long timestamps[MAX_STAMPS];
+
+	if (get_vsync(timestamps, MAX_STAMPS, pipe) == 0) {
+			long total_interval = 0;
+			for (int i = 0; i < MAX_STAMPS - 1; ++i) {
+					total_interval += (timestamps[i+1] - timestamps[i]);
+			}
+
+			double avg_interval =  total_interval / (MAX_STAMPS - 1) / 1000.0; // Convert to milliseconds
+			return avg_interval;
+	}
+	return 0.0;
+}
+

@@ -68,6 +68,24 @@ void print_vsyncs(char *msg, long *va, int sz)
 }
 
 /**
+ * @brief
+ * Print help message
+ *
+ * @param program_name - Name of the program
+ * @return void
+ */
+void print_help(const char *program_name)
+{
+	PRINT("Usage: %s [-p pipe] [-c vsync_count] [-v loglevel] [-h]\n"
+		"Options:\n"
+		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 0)\n"
+		"  -c vsync_count Number of vsyncs to get timestamp for (default: 300)\n"
+		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
+		"  -h             Display this help message\n",
+		program_name);
+}
+
+/**
 * @brief
 * This is the main function
 * @param argc - The number of command line arguments
@@ -78,20 +96,34 @@ void print_vsyncs(char *msg, long *va, int sz)
 */
 int main(int argc, char *argv[])
 {
-	int ret = 0, size;
+	int ret = 0;
 	long *client_vsync, avg;
-	
+
 	INFO("Vbltest Version: %s\n", get_version().c_str());
-
-	if(argc != 3) {
-		ERR("Usage: %s <number of vsyncs to get timestamp for> <0 based pipe to get for>\n", argv[0]);
-		return 1;
-	}
-
-	size = atoi(argv[1]);
-	if(size < 0 || size > 6000) {
-		ERR("Specify the number of vsyncs to be between 1 and 600\n");
-		return 1;
+	int vsync_count = 300;  // number of vsyncs to get timestamp for
+	int pipe = 0;  // Default pipe# 0
+	int opt;
+	while ((opt = getopt(argc, argv, "p:c:v:h")) != -1) {
+		switch (opt) {
+			case 'p':
+				pipe = std::stoi(optarg);
+				break;
+			case 'c':
+				vsync_count = std::stoi(optarg);
+				break;
+			case 'v':
+				set_log_level(optarg);
+				break;
+			case 'h':
+			case '?':
+				if (optopt == 'p' || optopt == 'c' || optopt == 'v') {
+					ERR("Option -%c requires an argument.\n", char(optopt));
+				} else {
+					ERR("Unknown option: -%c\n", char(optopt));
+				}
+				print_help(argv[0]);
+				exit(EXIT_FAILURE);
+		}
 	}
 
 	if(vsync_lib_init()) {
@@ -99,16 +131,16 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	client_vsync = new long[size];
+	client_vsync = new long[vsync_count];
 
-	if(get_vsync(client_vsync, size, atoi(argv[2]))) {
+	if(get_vsync(client_vsync, vsync_count, pipe)) {
 		delete [] client_vsync;
 		vsync_lib_uninit();
 		return 1;
 	}
 
-	avg = find_avg(&client_vsync[0], size);
-	print_vsyncs((char *) "", client_vsync, size);
+	avg = find_avg(&client_vsync[0], vsync_count);
+	print_vsyncs((char *) "", client_vsync, vsync_count);
 	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
 
 	delete [] client_vsync;

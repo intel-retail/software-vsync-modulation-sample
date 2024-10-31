@@ -1,42 +1,62 @@
 # Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-export PWD=$(shell pwd)
-BINNAME=$(notdir $(PWD))
-MAKE += --no-print-directory
-export CC=g++
-export DBG_FLAGS?=-Ofast
-export LIBS=-L. -L../lib  -lvsyncalter
-export INCLUDES=-I. -I../cmn
-export CFLAGS=-c -Wall
-export HEADERS=$(wildcard *.h)
-export SOURCES=$(wildcard *.cpp)
-OBJECTS=$(SOURCES:.cpp=.o)
+# Set the compiler
+CXX := g++
 
-all::
-	@echo "Compiling..."
+# Set the compiler flags
+CXXFLAGS := -Wall -I. -I../cmn
 
-all::$(SOURCES) $(BINNAME)
+# Directory for libraries
+LIBDIR := ../lib
 
-all::
-	@echo "Done"
+# Derive the binary name from the parent directory
+BINNAME := $(notdir $(CURDIR))
 
-$(BINNAME): $(OBJECTS)
-	@$(CC) $(DBG_FLAGS) -o $@ $(OBJECTS) $(LIBS)
-	@if [ "$(DBG_FLAGS)" = "" ]; then \
-		echo "Stripping $@"; \
-		strip -x $@; \
-	fi
+# Set the source directory and find all C++ files
+SRCDIR := .
+SOURCES := $(wildcard $(SRCDIR)/*.cpp)
 
-.cpp.o: $(HEADERS)
-	@echo $<
-	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(INCLUDES) $< 
+# Set the object directory and define object files
+OBJDIR := obj
+OBJECTS := $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
+
+# Define dependencies
+LIB_DEPENDENCIES := $(LIBDIR)/libvsyncalter.a  $(LIBDIR)/libvsyncalter.so
+
+# Default target (static linking)
+all: static
+
+# Target for building with dynamic linking
+dynamic: LIBS := -L$(LIBDIR) -lvsyncalter
+dynamic: $(BINNAME)
+
+# Target for building with static linking
+static: LIBS := -L$(LIBDIR) -l:libvsyncalter.a -lrt -ldrm -lpciaccess
+static: $(BINNAME)
+
+# Rule to link the binary
+$(BINNAME): $(OBJECTS) $(LIB_DEPENDENCIES)
+	@echo "Linking $@..."
+	@$(CXX) $(DBG_FLAGS) $(CXXFLAGS) -o $@ $(OBJECTS) $(LIBS)
+
+# Rule to compile the source files
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	@echo "Compiling $<..."
+	@mkdir -p $(OBJDIR)
+	@$(CXX) $(DBG_FLAGS) $(CXXFLAGS) -c $< -o $@
 
 debug:
 	@export DBG_FLAGS='-g -D DEBUGON'; \
 	$(MAKE)
 
-clean:
-	@echo "Cleaning..."
-	@rm -f $(BINNAME) *.o
+# Include dependency files
+-include $(OBJECTS:.o=.d)
 
+# Phony targets for cleanliness and utility
+.PHONY: clean dynamic static
+
+# Clean the build artifacts
+clean:
+	@echo "Cleaning up..."
+	@rm -rf $(OBJDIR) $(BINNAME)
