@@ -39,7 +39,7 @@
     0x9AF8
 
 
-#define INTEL_ADLS_IDS \
+#define INTEL_ADL_S_IDS \
     0x4680, \
     0x4682, \
     0x4688, \
@@ -53,7 +53,7 @@
     0x4692, \
     0x4693
 
-#define INTEL_ADLP_IDS \
+#define INTEL_ADL_P_IDS \
     0x46A0, \
     0x46A1, \
     0x46A2, \
@@ -73,12 +73,20 @@
     0x46C2, \
     0x46C3
 
-#define INTEL_RPLP_IDS \
+#define INTEL_ADL_N_IDS \
+    0x46D0, \
+    0x46D1
+
+#define INTEL_TWL_IDS \
+    0x46D3, \
+    0x46D4
+
+#define INTEL_RPL_P_IDS \
     0xA7A0, \
     0xA7A0, \
     0xA7A8
 
-#define INTEL_RPLS_IDS \
+#define INTEL_RPL_S_IDS \
     0x4680, \
     0x4682, \
     0x4692, \
@@ -87,7 +95,7 @@
     0xA782, \
     0xA783
 
-#define INTEL_RPLH_IDS \
+#define INTEL_RPL_H_IDS \
     0x4688, \
     0x468B, \
     0xA788, \
@@ -95,13 +103,35 @@
     0xA7A0, \
     0xA7A8
 
-#define INTEL_ADLP_FAM_IDS \
-    INTEL_ADLP_IDS, \
-    INTEL_RPLP_IDS, \
-    INTEL_RPLH_IDS
+#define INTEL_ADL_P_FAM_IDS \
+    INTEL_ADL_P_IDS, \
+    INTEL_ADL_N_IDS, \
+    INTEL_RPL_P_IDS, \
+    INTEL_RPL_H_IDS, \
+    INTEL_TWL_IDS
 
-#define INTEL_ADLS_FAM_IDS \
-    INTEL_ADLS_IDS, \
-    INTEL_RPLS_IDS
+#define INTEL_ADL_S_FAM_IDS \
+    INTEL_ADL_S_IDS, \
+    INTEL_RPL_S_IDS
+
+#define INTEL_MTL_M_IDS \
+    0x7D40, \
+    0x7D41, \
+    0x7D60, \
+    0x7D67
+
+#define INTEL_MTL_P_IDS \
+    0x7D45, \
+    0x7D55, \
+    0x7DD5
+
+#define INTEL_ARL_P_IDS \
+    0x7D51, \
+    0x7DD1
+
+#define INTEL_MTL_FAM_IDS \
+    INTEL_MTL_M_IDS, \
+    INTEL_MTL_P_IDS, \
+    INTEL_ARL_P_IDS
 
 #endif

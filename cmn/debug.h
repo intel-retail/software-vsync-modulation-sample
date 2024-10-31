@@ -25,47 +25,40 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
-#include <stdio.h>
-
-enum {
-	ERR,
-	INFO,
-	DBG,
-	TRACE,
+enum log_level {
+	LOG_LEVEL_NONE,
+	LOG_LEVEL_ERROR,
+	LOG_LEVEL_WARNING,
+	LOG_LEVEL_INFO,
+	LOG_LEVEL_DEBUG,
+	LOG_LEVEL_TRACE,
 };
 
-/**
-* Set it to 0 or higher with 0 being lowest number of messages
-* 0 = Only errors show up
-* 1 = Errors + Info messages
-* 2 = Errors + Info messages + Debug messages
-* 3 = Errors + Info messages + Debug messages + Trace calls
-*/
-#ifdef DEBUGON
-static int dbg_lvl = DBG;
-#else
-static int dbg_lvl = INFO;
-#endif
+extern log_level dbg_lvl;
 
-#define _PRINT(prefix, fmt, ...)  \
-	if(1) {\
-		printf("%s", prefix); \
-		printf(fmt, ##__VA_ARGS__); \
-		fflush(stdout); \
-	}
+void set_log_mode(const char* mode);
+void set_log_level(log_level level);
+void set_log_level(const char* log_level);
+void log_message(log_level level, const char* format, ...);
 
-#define PRINT(fmt, ...)    _PRINT("", fmt, ##__VA_ARGS__)
-#define ERR(fmt, ...)    _PRINT("[Error] ", fmt, ##__VA_ARGS__)
-#define WARNING(fmt, ...)  _PRINT("[Warning] ", fmt, ##__VA_ARGS__)
-#define DBG(fmt, ...)      if(dbg_lvl >= DBG) _PRINT("[DBG] ", fmt, ##__VA_ARGS__)
-#define INFO(fmt, ...)     if(dbg_lvl >= INFO) _PRINT("[Info] ", fmt, ##__VA_ARGS__)
-#define TRACE(fmt, ...)    if(dbg_lvl >= TRACE) PRINT(fmt, ##__VA_ARGS__)
+#define PRINT(format, ...) \
+	log_message(LOG_LEVEL_NONE, format, ##__VA_ARGS__)
 
-#ifdef __cplusplus
-#define TRACING()  tracer trace(__FUNCTION__);
-#else
-#define TRACING()
-#endif
+#define ERR(format, ...) \
+	log_message(LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
+
+#define WARNING(format, ...) \
+	log_message(LOG_LEVEL_WARNING, format, ##__VA_ARGS__)
+
+#define INFO(format, ...) \
+	log_message(LOG_LEVEL_INFO, format, ##__VA_ARGS__)
+
+#define DBG(format, ...) \
+	log_message(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
+
+#define TRACE(format, ...) \
+	log_message(LOG_LEVEL_TRACE, format, ##__VA_ARGS__)
+
 
 #ifdef __cplusplus
 class tracer {
@@ -81,14 +74,10 @@ public:
 };
 #endif
 
-inline int set_dbg_lvl(int lvl)
-{
-	int ret = 1;
-	if(lvl >= ERR && lvl <= TRACE) {
-		dbg_lvl = lvl;
-		ret = 0;
-	}
-	return ret;
-}
-
+#ifdef __cplusplus
+#define TRACING()  tracer trace(__FUNCTION__);
+#else
+#define TRACING()
 #endif
+
+#endif // _DEBUG_H

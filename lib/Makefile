@@ -1,43 +1,63 @@
 # Copyright (C) 2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-export PWD=$(shell pwd)
-BINNAME=libvsyncalter.so
-MAKE += --no-print-directory
-export CC=g++
-export DBG_FLAGS?=-Ofast
-export LIBS=-lrt -ldrm -lpciaccess
-export INCLUDES=-I../cmn -I/usr/include/drm -Iplatforms
-export CFLAGS=-c -fPIC
-export LFLAGS=-Wall
-export HEADERS=$(wildcard *.h)
-export SOURCES=$(wildcard *.cpp)
-OBJECTS=$(SOURCES:.cpp=.o)
+# Compiler and Flags
+CXX := g++
+CXXFLAGS := -Wall -fPIC -I../cmn -Iplatforms -Iinclude -I. -I/usr/include/drm
+LIBS :=-lrt -ldrm -lpciaccess
+# Directories
+SRCDIR := .
+OBJDIR := obj
+INCLUDEDIR := include
 
-all::
-	@echo "Compiling..."
+# Target libraries
+TARGET_SHARED := libvsyncalter.so
+TARGET_STATIC := libvsyncalter.a
 
-all::$(SOURCES) $(BINNAME)
+# Find source files, create a list of object files
+SOURCES := $(wildcard $(SRCDIR)/*.cpp)
+HEADERS := $(wildcard $(SRCDIR)/*.h ../cmn/*.h)
+OBJECTS := $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
+DEPS := $(OBJECTS:.o=.d)  # Dependency files corresponding to object files
 
-all::
-	@echo "Done"
+# Check if VERBOSE is set to 1, if not, silence the commands
+ifeq ($(VERBOSE),1)
+CMD_PREFIX=
+else
+CMD_PREFIX=@
+endif
 
-$(BINNAME): $(OBJECTS)
-	@$(CC) $(DBG_FLAGS) $(LFLAGS) -shared -o $@ $(OBJECTS) $(LIBS) 
-	@if [ "$(DBG_FLAGS)" = "" ]; then \
-		echo "Stripping $@"; \
-		strip -x $@; \
-	fi
+# Default target
+all: $(TARGET_SHARED) $(TARGET_STATIC)
 
-.cpp.o:
-	@echo $<
-	@$(CC) $(DBG_FLAGS) $(CFLAGS) $(LFLAGS) $(INCLUDES) $< 
+# Shared library
+$(TARGET_SHARED): $(OBJECTS)
+	$(CMD_PREFIX)echo "Creating shared library..."
+	$(CMD_PREFIX)$(CXX) -Wall -shared $(DBG_FLAGS) -o $@ $^ $(LIBS)
+# Static library
+$(TARGET_STATIC): $(OBJECTS)
+	$(CMD_PREFIX)echo "Creating static library..."
+	$(CMD_PREFIX)ar rcs $@ $^
+
+# Compile source files into object files
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(HEADERS)
+	$(CMD_PREFIX)echo "Compiling $<"
+	$(CMD_PREFIX)mkdir -p $(OBJDIR)
+	$(CMD_PREFIX)$(CXX) $(CXXFLAGS) $(DBG_FLAGS) -c $< -o $@
+
+# Include the .d files
+-include $(DEPS)
 
 debug:
 	@export DBG_FLAGS='-g -D DEBUGON'; \
 	$(MAKE)
 
+# Clean up build artifacts
 clean:
-	@echo "Cleaning..."
-	@rm -f $(BINNAME) *.o
+	$(CMD_PREFIX)echo "Cleaning..."
+	$(CMD_PREFIX)rm -f $(TARGET_SHARED) $(TARGET_STATIC) $(OBJECTS) $(DEPS)
+	$(CMD_PREFIX)rm -rf $(OBJDIR)
 
+
+# Phony targets
+.PHONY: all clean

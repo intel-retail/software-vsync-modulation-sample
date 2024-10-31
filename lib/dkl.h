@@ -60,8 +60,9 @@ public:
 
 	void program_mmio(dkl_phy_reg *pr, int mod);
 	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
+	void reset_phy_regs(dkl_phy_reg *dr);
 
-	void program_phy(double time_diff);
+	void program_phy(double time_diff, double shift);
 	void wait_until_done();
 };
 

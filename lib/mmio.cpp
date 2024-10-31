@@ -40,7 +40,7 @@ unsigned char g_raw_device[256] = {0};
 gfx_pci_device g_device;
 unsigned char *g_mmio = NULL;
 unsigned char *g_mem = NULL;
-int g_fd = 0;
+int g_fd = -1;
 int g_mmio_size = 0;
 int g_mem_size = 0;
 unsigned int cpu_offset=0;
@@ -192,7 +192,6 @@ int map_mmio()
 int map_cmn(int base_index, int size)
 {
 	std::lock_guard<std::mutex> lock(map_mutex); // Lock the mutex for the scope of the function
-
 	int found = 0;
 	loff_t base;
 	int ret_val = 1;
@@ -280,7 +279,7 @@ void close_mmio_handle()
 {
 	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
 	pci_system_cleanup();
-	if (close(g_fd) == -1) {
+	if (g_fd >= 0 && close(g_fd) == -1) {
 		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
 	}
 }

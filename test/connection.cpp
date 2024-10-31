@@ -273,20 +273,44 @@ int connection::sendto_msg(void *m, int size, int sockid, struct sockaddr *dest,
 * - 0 = SUCCESS
 * - 1 = FAILURE
 */
+extern int client_done;
 int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
 {
 	long bytes_returned;
 	int cli_len = dest_size;
-	bytes_returned = recvfrom(sockid ? sockid : sockfd,
-			(char *) m,
-			size,
-			0,
-			dest,
-			(unsigned int *) &cli_len);
-	DBG("Received message with %ld bytes\n", bytes_returned);
-	if(bytes_returned < 0) {
-		ERR("recv function failed. Error: %s\n", strerror(errno));
-		return 1;
+	struct timeval timeout;
+	fd_set readfds;
+
+	while (!client_done) {
+		FD_ZERO(&readfds);
+		FD_SET(sockfd, &readfds);
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 500000; // 500ms timeout
+
+		// Use select to check if data is available to read on the socket
+		// before calling the potentially blocking recvfrom call
+		int activity = select(sockfd + 1, &readfds, NULL, NULL, &timeout);
+
+		if ((activity < 0) && (errno != EINTR)) {
+				ERR("select error");
+			}
+
+		// Check if the socket has data available to read
+		if (FD_ISSET(sockfd, &readfds) && !client_done) {
+			// Data is available on the socket, read it using recvfrom
+			bytes_returned = recvfrom(sockid ? sockid : sockfd,
+					(char *) m,
+					size,
+					0,
+					dest,
+					(unsigned int *) &cli_len);
+			DBG("Received message with %ld bytes\n", bytes_returned);
+			if(bytes_returned < 0) {
+				ERR("recv function failed. Error: %s\n", strerror(errno));
+				return 1;
+			}
+			return 0;
+		}
 	}
 	return 0;
 }
@@ -299,7 +323,7 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 *		84:47:09:04:eb:0e
 * @return void
 */
-ptp_connection::ptp_connection(char *ifc, char *mac)
+ptp_connection::ptp_connection(const char *ifc, const char *mac)
 {
 	con_type = PTP;
 	memset(server_ip, 0, MAX_LEN);
