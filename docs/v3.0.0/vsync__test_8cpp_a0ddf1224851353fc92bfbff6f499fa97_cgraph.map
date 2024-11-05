@@ -1,0 +1,52 @@
+<map id="main" name="main">
+<area shape="rect" id="node1" title="This is the main function." alt="" coords="5,550,60,576"/>
+<area shape="rect" id="node2" href="$vsync__test_8cpp.html#a76e5a18d6c45463c6e2f7a339229d807" title="This function closes the client&#39;s socket." alt="" coords="108,103,253,130"/>
+<area shape="rect" id="node4" href="$classconnection.html#a3d335b9486ca22756dd42d19220fabf9" title="Closes a client&#39;s connection to the server." alt="" coords="301,550,480,576"/>
+<area shape="rect" id="node5" href="$vsync__test_8cpp.html#a52fcd440c288502d65dab7591e82cb95" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="133,398,229,424"/>
+<area shape="rect" id="node28" href="$vsyncalter_8h.html#a35dc013212b176f47265e64746fedc0d" title="This function uninitializes the library by closing devices and unmapping memory. It must be called at..." alt="" coords="556,246,683,272"/>
+<area shape="rect" id="node31" href="$vsync__test_8cpp.html#a67b9db8ab250881ca227a14cd03c9126" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="125,727,237,754"/>
+<area shape="rect" id="node42" href="$vsync__test_8cpp.html#ae5d62d86e562ee295d1566f9ad74b73c" title="Print help message." alt="" coords="137,778,224,804"/>
+<area shape="rect" id="node43" href="$debug_8h.html#a1238e1da49b060e4a41b609e39e4d1f2" title="This function sets the logging level for the application. The logging level determines the severity o..." alt="" coords="127,828,235,855"/>
+<area shape="rect" id="node44" href="$debug_8h.html#acd3426576c75d9b42f1276b4f8cc3704" title="This function sets the logging mode for the application. The logging mode determines the source for t..." alt="" coords="124,879,237,906"/>
+<area shape="rect" id="node45" href="$vsyncalter_8h.html#a1ccc7c011ad035e21d4367fc5dcb412c" title="This function initializes the library. It must be called ahead of all other functions because it open..." alt="" coords="335,144,446,171"/>
+<area shape="rect" id="node3" href="$vsyncalter_8h.html#a4cebd29204563e368cde9604f0bcbb50" title="Sets a global flag to indicate client app termination via Ctrl+C." alt="" coords="337,94,445,120"/>
+<area shape="rect" id="node6" href="$classconnection.html#aefcffb00d8835dfed032313cbd292c07" title="This function waits until a client connects to it. It uses the accept API to listen in for any incomi..." alt="" coords="319,332,463,373"/>
+<area shape="rect" id="node7" href="$vsync__test_8cpp.html#a30f13cb2b111df5e72d2c977803a52ce" title="This function is used by the server side to get last 10 vsyncs, send them to the client and receive a..." alt="" coords="354,499,427,526"/>
+<area shape="rect" id="node23" href="$classconnection.html#a96130f5b9d6d63d51c35dc746988e8cc" title="This function initalizes the server by opening a socket, binding the server and listening for any inc..." alt="" coords="305,398,476,424"/>
+<area shape="rect" id="node27" href="$vsync__test_8cpp.html#a39b58a2a7bc1057f428bb132a1f46fe7" title="This function closes the server&#39;s socket." alt="" coords="315,280,466,307"/>
+<area shape="rect" id="node8" href="$classmsg.html#a2fd09f5f1b1b1a4520bbe5bda12c711c" title=" " alt="" coords="560,600,679,627"/>
+<area shape="rect" id="node9" href="$classmsg.html#a4f27d8dcfc1b176228c9beb32fd9904f" title=" " alt="" coords="556,651,683,678"/>
+<area shape="rect" id="node10" href="$classmsg.html#a4e2cef31d72aef6c076dd9ca0c8491e7" title=" " alt="" coords="562,499,677,526"/>
+<area shape="rect" id="node11" href="$classmsg.html#a213e463e2f59d260448a163eb060bf26" title=" " alt="" coords="568,752,671,779"/>
+<area shape="rect" id="node12" href="$classmsg.html#a5a9a59ba1990ba6912d7d5dd0973f1d0" title=" " alt="" coords="533,550,706,576"/>
+<area shape="rect" id="node13" href="$vsyncalter_8h.html#ac60432ce7a758749c9a717e9e7668850" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="812,803,900,830"/>
+<area shape="rect" id="node18" href="$vsync__test_8cpp.html#a2d575aeb5e2785705d4383ffea88b270" title="This function prints out the last N vsyncs that the system has received either on its own or from ano..." alt="" coords="567,904,671,931"/>
+<area shape="rect" id="node19" href="$classconnection.html#a1ff5f4909852c11dbea214bb7e4b708e" title=" " alt="" coords="537,854,701,880"/>
+<area shape="rect" id="node21" href="$classconnection.html#ab01fb91d5a4897cc26dd81ca1dfdf0f2" title=" " alt="" coords="536,955,703,982"/>
+<area shape="rect" id="node14" href="$vsyncalter_8cpp.html#a207d247b175aba8213284ecf344ddd77" title="This function closes an open handle." alt="" coords="1009,854,1116,880"/>
+<area shape="rect" id="node15" href="$vsyncalter_8cpp.html#aa4cbfb6dcebfe97b9923cbc44394cc1f" title="This function opens /dev/dri/card0." alt="" coords="1011,803,1115,830"/>
+<area shape="rect" id="node16" href="$vsyncalter_8cpp.html#aa5b2359b39d48f12b1e5698243aa677c" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="1172,904,1303,931"/>
+<area shape="rect" id="node17" href="$vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8" title="The function which will be called whenever a VBLANK occurs." alt="" coords="1001,904,1124,931"/>
+<area shape="rect" id="node20" href="$classconnection.html#a8d26a5bf6691a16c27825b70debcd32d" title=" " alt="" coords="759,854,953,880"/>
+<area shape="rect" id="node22" href="$classconnection.html#a535d212e860d1a615e69f524ad91a274" title="This function sends a message to the other system using the send API." alt="" coords="766,904,946,931"/>
+<area shape="rect" id="node24" href="$classconnection.html#a4b7a7d1ce6ab9f9de9113b59df911503" title="Closes a server&#39;s socket." alt="" coords="528,296,711,323"/>
+<area shape="rect" id="node25" href="$classconnection.html#af8f54a105505827800868b3af5ed6300" title="This function opens a TCP socket stream." alt="" coords="528,347,711,374"/>
+<area shape="rect" id="node26" href="$classconnection.html#a165e78d186cc8084ea81a2a31a6d0366" title="This function sets server characteristics like portid." alt="" coords="535,398,704,424"/>
+<area shape="rect" id="node29" href="$vsyncalter_8cpp.html#a6c3688799fc62d197fe8e3b25ba950cf" title="This function deallocates all members of the phy_enabled_list." alt="" coords="791,195,921,222"/>
+<area shape="rect" id="node30" href="$mmio_8cpp.html#a103c86119a15e95de20a15b3b017def2" title="Unmap the memory range that was mapped during initialization." alt="" coords="780,246,932,272"/>
+<area shape="rect" id="node32" href="$classmsg.html#afd7a95745e29979cf9627a4210e7357d" title=" " alt="" coords="350,1107,431,1134"/>
+<area shape="rect" id="node33" href="$vsync__test_8cpp.html#a049c841403301e23cad5dbb474f448a0" title="This function is the background thread task to call print_vblank_interval." alt="" coords="324,1056,457,1083"/>
+<area shape="rect" id="node34" href="$vsyncalter_8h.html#afbb2401fa8ea7201da5a72c33768159e" title="This function collects vblank timestamps and prints average interval between them." alt="" coords="544,1006,695,1032"/>
+<area shape="rect" id="node36" href="$classmsg.html#aca32be687763138892c26f7a2699743b" title=" " alt="" coords="315,1158,467,1184"/>
+<area shape="rect" id="node37" href="$vsync__test_8cpp.html#a7b625e8a9a83c76fb85606039a5051ad" title="This function finds the average of all the vertical syncs that have been provided by the primary syst..." alt="" coords="352,600,429,627"/>
+<area shape="rect" id="node38" href="$classconnection.html#a60cce1534f624b7db9b09c5377f9fab5" title="This function initalizes the client, by opening the socket and connecting to the server." alt="" coords="308,448,473,475"/>
+<area shape="rect" id="node40" href="$classmsg.html#a6b0ca021f3b4c06146c433bb72e58c31" title=" " alt="" coords="305,702,477,728"/>
+<area shape="rect" id="node41" href="$vsyncalter_8h.html#aff93933b34a0eef5f66027c463ab7886" title="This function synchronizes the primary and secondary systems vsync. It is run on the secondary system..." alt="" coords="318,752,463,779"/>
+<area shape="rect" id="node35" href="$vsyncalter_8cpp.html#a1ba8490a15285f7f92273235530e548a" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="812,955,900,982"/>
+<area shape="rect" id="node39" href="$classconnection.html#ae106c525f92dc8b2edd92e78c835038b" title="pr_inet" alt="" coords="546,448,693,475"/>
+<area shape="rect" id="node46" href="$vsyncalter_8cpp.html#a4e6e0eb077dbbca33e1b46831375abd8" title=" " alt="" coords="548,43,691,70"/>
+<area shape="rect" id="node47" href="$mmio_8cpp.html#aba63761c97bf3ce8d09b95186f08d487" title="This functions gets the deivce ID of the device." alt="" coords="563,94,675,120"/>
+<area shape="rect" id="node48" href="$mmio_8cpp.html#a27c965f14e3b33dbdaae56d707dc39f4" title="This functions maps the MMIO region." alt="" coords="571,144,667,171"/>
+<area shape="rect" id="node49" href="$vsyncalter_8cpp.html#a351e6972e35b44a044fbf58a36752f95" title="Prints the DRM information. Loops through all CRTCs and Connectors and prints their information." alt="" coords="797,68,915,95"/>
+<area shape="rect" id="node50" href="$vsyncalter_8cpp.html#a35dc013212b176f47265e64746fedc0d" title="This function uninitializes the library by closing devices and unmapping memory. It must be called at..." alt="" coords="556,195,683,222"/>
+</map>

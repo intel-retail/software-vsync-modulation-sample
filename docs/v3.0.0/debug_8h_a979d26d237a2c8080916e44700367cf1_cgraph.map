@@ -1,0 +1,4 @@
+<map id="set_log_level" name="set_log_level">
+<area shape="rect" id="node1" title="This function sets the logging level for the application via string parameter. The logging level dete..." alt="" coords="5,5,113,32"/>
+<area shape="rect" id="node2" href="$debug_8cpp.html#a1238e1da49b060e4a41b609e39e4d1f2" title="This function sets the logging level for the application. The logging level determines the severity o..." alt="" coords="161,5,269,32"/>
+</map>

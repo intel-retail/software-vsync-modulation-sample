@@ -1,0 +1,5 @@
+<map id="print_drm_info" name="print_drm_info">
+<area shape="rect" id="node1" title="Prints the DRM information. Loops through all CRTCs and Connectors and prints their information." alt="" coords="267,5,384,32"/>
+<area shape="rect" id="node2" href="$vsyncalter_8h.html#a1ccc7c011ad035e21d4367fc5dcb412c" title="This function initializes the library. It must be called ahead of all other functions because it open..." alt="" coords="108,5,219,32"/>
+<area shape="rect" id="node3" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,5,60,32"/>
+</map>

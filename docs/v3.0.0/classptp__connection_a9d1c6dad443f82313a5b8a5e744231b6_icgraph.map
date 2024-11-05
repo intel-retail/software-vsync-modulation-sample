@@ -1,0 +1,6 @@
+<map id="ptp_connection::find_iface_index" name="ptp_connection::find_iface_index">
+<area shape="rect" id="node1" title="Given a PTP interface name, this function finds the index of this interface. It does so by sending th..." alt="" coords="441,39,595,80"/>
+<area shape="rect" id="node2" href="$classptp__connection.html#a4223e85345baa73a33ba3eeb2af21db9" title="This function opens a ptp socket, find the corresponding interface index and binds the connection." alt="" coords="204,46,393,73"/>
+<area shape="rect" id="node3" href="$classptp__connection.html#addd630b8bfb29c8b4d640129e283ecbc" title="This function initializes the client. Besides opening a PTP socket, we also convert the ethernet addr..." alt="" coords="5,5,156,47"/>
+<area shape="rect" id="node4" href="$classptp__connection.html#a646c620003bc3bf475774df86b901cfd" title="This function initializes the PTP server. It&#39;s just a wrapper around ptp_open." alt="" coords="5,71,156,112"/>
+</map>

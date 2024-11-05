@@ -1,0 +1,4 @@
+<map id="get_device_id" name="get_device_id">
+<area shape="rect" id="node1" title="This functions gets the deivce ID of the device." alt="" coords="5,5,117,32"/>
+<area shape="rect" id="node2" href="$mmio_8cpp.html#a2fbf38be7295d345a8dd72b4c618cf4f" title="Looks up the main graphics pci device using libpciaccess." alt="" coords="165,5,320,32"/>
+</map>

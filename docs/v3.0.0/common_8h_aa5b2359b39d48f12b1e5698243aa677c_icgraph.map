@@ -1,0 +1,13 @@
+<map id="pipe_to_wait_for" name="pipe_to_wait_for">
+<area shape="rect" id="node1" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="795,81,925,108"/>
+<area shape="rect" id="node2" href="$vsyncalter_8h.html#ac60432ce7a758749c9a717e9e7668850" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="488,81,576,108"/>
+<area shape="rect" id="node11" href="$vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8" title="The function which will be called whenever a VBLANK occurs." alt="" coords="624,107,747,133"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a30f13cb2b111df5e72d2c977803a52ce" title="This function is used by the server side to get last 10 vsyncs, send them to the client and receive a..." alt="" coords="328,5,401,32"/>
+<area shape="rect" id="node6" href="$vsync__test_8cpp.html#a67b9db8ab250881ca227a14cd03c9126" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="119,56,231,83"/>
+<area shape="rect" id="node7" href="$vsyncalter_8h.html#afbb2401fa8ea7201da5a72c33768159e" title="This function collects vblank timestamps and prints average interval between them." alt="" coords="289,107,440,133"/>
+<area shape="rect" id="node10" href="$vbltest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="337,157,392,184"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a52fcd440c288502d65dab7591e82cb95" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="127,5,223,32"/>
+<area shape="rect" id="node5" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,44,60,71"/>
+<area shape="rect" id="node8" href="$synctest_8cpp.html#a049c841403301e23cad5dbb474f448a0" title="This function is the background thread task to call print_vblank_interval." alt="" coords="108,107,241,133"/>
+<area shape="rect" id="node9" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,120,60,147"/>
+</map>

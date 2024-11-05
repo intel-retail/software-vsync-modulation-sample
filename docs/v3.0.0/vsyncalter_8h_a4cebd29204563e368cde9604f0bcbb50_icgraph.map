@@ -1,0 +1,5 @@
+<map id="shutdown_lib" name="shutdown_lib">
+<area shape="rect" id="node1" title="Sets a global flag to indicate client app termination via Ctrl+C." alt="" coords="301,5,409,32"/>
+<area shape="rect" id="node2" href="$vsync__test_8cpp.html#a76e5a18d6c45463c6e2f7a339229d807" title="This function closes the client&#39;s socket." alt="" coords="108,5,253,32"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,5,60,32"/>
+</map>

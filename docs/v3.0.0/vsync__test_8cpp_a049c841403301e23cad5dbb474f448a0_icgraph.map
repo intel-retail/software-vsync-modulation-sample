@@ -1,0 +1,5 @@
+<map id="background_task" name="background_task">
+<area shape="rect" id="node1" title="This function is the background thread task to call print_vblank_interval." alt="" coords="268,5,401,32"/>
+<area shape="rect" id="node2" href="$vsync__test_8cpp.html#a67b9db8ab250881ca227a14cd03c9126" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="108,5,220,32"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,5,60,32"/>
+</map>

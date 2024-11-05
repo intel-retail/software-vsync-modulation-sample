@@ -1,0 +1,5 @@
+<map id="ptp_connection::ptp_open" name="ptp_connection::ptp_open">
+<area shape="rect" id="node1" title="This function opens a ptp socket, find the corresponding interface index and binds the connection." alt="" coords="5,42,195,69"/>
+<area shape="rect" id="node2" href="$classptp__connection.html#a9d1c6dad443f82313a5b8a5e744231b6" title="Given a PTP interface name, this function finds the index of this interface. It does so by sending th..." alt="" coords="257,5,411,47"/>
+<area shape="rect" id="node3" href="$classconnection.html#af8f54a105505827800868b3af5ed6300" title="This function opens a TCP socket stream." alt="" coords="243,71,425,98"/>
+</map>

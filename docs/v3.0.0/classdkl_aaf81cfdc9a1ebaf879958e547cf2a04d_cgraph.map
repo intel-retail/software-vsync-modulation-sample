@@ -1,0 +1,4 @@
+<map id="dkl::reset_phy_regs" name="dkl::reset_phy_regs">
+<area shape="rect" id="node1" title=" " alt="" coords="5,5,155,32"/>
+<area shape="rect" id="node2" href="$classdkl.html#ab18cfbfa8e8c04014d91c280f69e590a" title="This function programs the DKL Phy MMIO registers needed to move a vsync period for a system." alt="" coords="203,5,353,32"/>
+</map>

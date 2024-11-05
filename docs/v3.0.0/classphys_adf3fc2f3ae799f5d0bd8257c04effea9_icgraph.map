@@ -1,0 +1,6 @@
+<map id="phys::make_timer" name="phys::make_timer">
+<area shape="rect" id="node1" title="This function creates a timer." alt="" coords="213,56,352,83"/>
+<area shape="rect" id="node2" href="$classc10.html#a885c4cd7aaba3cce98c5693a72ca27b8" title="This function calculates pll values to achieve desired drift using the given shift value...." alt="" coords="16,5,155,32"/>
+<area shape="rect" id="node3" href="$classcombo.html#a7986aa6f67cae4a1855f389d5fd8b4c8" title="This function programs Combo phys on the system." alt="" coords="5,56,165,83"/>
+<area shape="rect" id="node4" href="$classdkl.html#a3e26d69d0648fbf413ccd8a4da6ef802" title="This function programs DKL phys on the system." alt="" coords="17,107,153,133"/>
+</map>

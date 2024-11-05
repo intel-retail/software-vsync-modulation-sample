@@ -1,0 +1,6 @@
+<map id="connection::init_server" name="connection::init_server">
+<area shape="rect" id="node1" title="This function initalizes the server by opening a socket, binding the server and listening for any inc..." alt="" coords="5,56,176,83"/>
+<area shape="rect" id="node2" href="$classconnection.html#a4b7a7d1ce6ab9f9de9113b59df911503" title="Closes a server&#39;s socket." alt="" coords="224,5,407,32"/>
+<area shape="rect" id="node3" href="$classconnection.html#af8f54a105505827800868b3af5ed6300" title="This function opens a TCP socket stream." alt="" coords="224,56,407,83"/>
+<area shape="rect" id="node4" href="$classconnection.html#a165e78d186cc8084ea81a2a31a6d0366" title="This function sets server characteristics like portid." alt="" coords="231,107,400,133"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="ptp_connection::init_client" name="ptp_connection::init_client">
+<area shape="rect" id="node1" title="This function initializes the client. Besides opening a PTP socket, we also convert the ethernet addr..." alt="" coords="5,64,156,105"/>
+<area shape="rect" id="node2" href="$classptp__connection.html#a4223e85345baa73a33ba3eeb2af21db9" title="This function opens a ptp socket, find the corresponding interface index and binds the connection." alt="" coords="204,42,393,69"/>
+<area shape="rect" id="node5" href="$classptp__connection.html#a1116fd67c54572fe6fb80486e3d63ada" title="This function converts a string based ethernet address to the l2 format. The result is stored in addr..." alt="" coords="225,93,372,135"/>
+<area shape="rect" id="node3" href="$classptp__connection.html#a9d1c6dad443f82313a5b8a5e744231b6" title="Given a PTP interface name, this function finds the index of this interface. It does so by sending th..." alt="" coords="456,5,609,47"/>
+<area shape="rect" id="node4" href="$classconnection.html#af8f54a105505827800868b3af5ed6300" title="This function opens a TCP socket stream." alt="" coords="441,71,624,98"/>
+</map>

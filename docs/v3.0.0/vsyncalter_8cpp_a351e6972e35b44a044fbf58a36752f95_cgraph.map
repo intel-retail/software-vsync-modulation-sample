@@ -1,0 +1,4 @@
+<map id="print_drm_info" name="print_drm_info">
+<area shape="rect" id="node1" title="Prints the DRM information. Loops through all CRTCs and Connectors and prints their information." alt="" coords="5,5,123,32"/>
+<area shape="rect" id="node2" href="$vsyncalter_8cpp.html#aa4cbfb6dcebfe97b9923cbc44394cc1f" title="This function opens /dev/dri/card0." alt="" coords="171,5,275,32"/>
+</map>

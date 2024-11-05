@@ -1,0 +1,7 @@
+<map id="connection::close_server" name="connection::close_server">
+<area shape="rect" id="node1" title="Closes a server&#39;s socket." alt="" coords="471,31,653,57"/>
+<area shape="rect" id="node2" href="$classconnection.html#a96130f5b9d6d63d51c35dc746988e8cc" title="This function initalizes the server by opening a socket, binding the server and listening for any inc..." alt="" coords="252,5,423,32"/>
+<area shape="rect" id="node5" href="$vsync__test_8cpp.html#a39b58a2a7bc1057f428bb132a1f46fe7" title="This function closes the server&#39;s socket." alt="" coords="262,56,413,83"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a52fcd440c288502d65dab7591e82cb95" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="108,31,204,57"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,31,60,57"/>
+</map>

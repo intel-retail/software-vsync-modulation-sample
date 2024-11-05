@@ -1,0 +1,9 @@
+<map id="connection::sendto_msg" name="connection::sendto_msg">
+<area shape="rect" id="node1" title="This function sends a message to the other system using the send API." alt="" coords="632,31,812,57"/>
+<area shape="rect" id="node2" href="$classptp__connection.html#a1a51e12fb3e0c7f49e516acbf10a9ab9" title="This function sends a message to a destination address using sendto API." alt="" coords="389,5,584,32"/>
+<area shape="rect" id="node3" href="$classconnection.html#ab01fb91d5a4897cc26dd81ca1dfdf0f2" title=" " alt="" coords="403,56,570,83"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a30f13cb2b111df5e72d2c977803a52ce" title="This function is used by the server side to get last 10 vsyncs, send them to the client and receive a..." alt="" coords="268,31,341,57"/>
+<area shape="rect" id="node7" href="$vsync__test_8cpp.html#a67b9db8ab250881ca227a14cd03c9126" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="108,81,220,108"/>
+<area shape="rect" id="node5" href="$vsync__test_8cpp.html#a52fcd440c288502d65dab7591e82cb95" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="116,31,212,57"/>
+<area shape="rect" id="node6" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,56,60,83"/>
+</map>

@@ -1,0 +1,27 @@
+var searchData=
+[
+  ['security_20policy_408',['Security Policy',['../md_security.html',1,'']]],
+  ['security_2emd_409',['security.md',['../security_8md.html',1,'']]],
+  ['send_5fmsg_410',['send_msg',['../classconnection.html#ab01fb91d5a4897cc26dd81ca1dfdf0f2',1,'connection::send_msg()'],['../classptp__connection.html#a1a51e12fb3e0c7f49e516acbf10a9ab9',1,'ptp_connection::send_msg()']]],
+  ['sendto_5fmsg_411',['sendto_msg',['../classconnection.html#a535d212e860d1a615e69f524ad91a274',1,'connection']]],
+  ['server_412',['server',['../vsync__test_8cpp.html#a6eb3855acc3b4bd74652ede542006355',1,'vsync_test.cpp']]],
+  ['server_5faddr_413',['server_addr',['../classconnection.html#a58e0f71f0e33e89970842baffb3da646',1,'connection']]],
+  ['server_5fclose_5fsignal_414',['server_close_signal',['../vsync__test_8cpp.html#a39b58a2a7bc1057f428bb132a1f46fe7',1,'vsync_test.cpp']]],
+  ['server_5fip_415',['server_ip',['../classptp__connection.html#ae3be1381ece4426bc41885603737a8ea',1,'ptp_connection']]],
+  ['set_5fds_416',['set_ds',['../classphys.html#a9228a76b39062fd4f4551f9bd3000214',1,'phys']]],
+  ['set_5finit_417',['set_init',['../classphys.html#a1260ad56f1e764968d05403617e16c3f',1,'phys']]],
+  ['set_5flog_5flevel_418',['set_log_level',['../debug_8h.html#a979d26d237a2c8080916e44700367cf1',1,'set_log_level(const char *log_level):&#160;debug.cpp'],['../debug_8cpp.html#a979d26d237a2c8080916e44700367cf1',1,'set_log_level(const char *log_level):&#160;debug.cpp'],['../debug_8cpp.html#a1238e1da49b060e4a41b609e39e4d1f2',1,'set_log_level(log_level level):&#160;debug.cpp'],['../debug_8h.html#a1238e1da49b060e4a41b609e39e4d1f2',1,'set_log_level(log_level level):&#160;debug.cpp']]],
+  ['set_5flog_5fmode_419',['set_log_mode',['../debug_8h.html#acd3426576c75d9b42f1276b4f8cc3704',1,'set_log_mode(const char *mode):&#160;debug.cpp'],['../debug_8cpp.html#acd3426576c75d9b42f1276b4f8cc3704',1,'set_log_mode(const char *mode):&#160;debug.cpp']]],
+  ['set_5fpipe_420',['set_pipe',['../classphys.html#ae3f11f89d561c45ec9233729f4382733',1,'phys']]],
+  ['set_5fserver_421',['set_server',['../classconnection.html#a165e78d186cc8084ea81a2a31a6d0366',1,'connection']]],
+  ['set_5fvblank_5fcount_422',['set_vblank_count',['../classmsg.html#a6b0ca021f3b4c06146c433bb72e58c31',1,'msg']]],
+  ['shift_423',['SHIFT',['../common_8h.html#ac179eef68bcc694aa0ef8dd1eb09950b',1,'common.h']]],
+  ['shutdown_5flib_424',['shutdown_lib',['../vsyncalter_8cpp.html#a4cebd29204563e368cde9604f0bcbb50',1,'shutdown_lib(void):&#160;vsyncalter.cpp'],['../vsyncalter_8h.html#a4cebd29204563e368cde9604f0bcbb50',1,'shutdown_lib(void):&#160;vsyncalter.cpp']]],
+  ['size_425',['size',['../mmio_8h.html#ab061e1e509f569372345059ea87069bc',1,'gfx_pci_device::size()'],['../common_8h.html#a109ffd9a196b0a6b75c6a3b976f9aeed',1,'vbl_info::size()']]],
+  ['sockfd_426',['sockfd',['../classconnection.html#a75092a11efeed5c5630c435a09348a37',1,'connection']]],
+  ['str_5fto_5fl2_5faddr_427',['str_to_l2_addr',['../classptp__connection.html#a1116fd67c54572fe6fb80486e3d63ada',1,'ptp_connection']]],
+  ['success_428',['SUCCESS',['../connection_8h.html#adf764cbdea00d65edcd07bb9953ad2b7ac7f69f7c9e5aea9b8f54cf02870e2bf8',1,'connection.h']]],
+  ['supported_5fplatform_429',['supported_platform',['../common_8h.html#ad528e611992e8351b42c55c1f9e59bdc',1,'supported_platform():&#160;vsyncalter.cpp'],['../vsyncalter_8cpp.html#ad528e611992e8351b42c55c1f9e59bdc',1,'supported_platform():&#160;vsyncalter.cpp']]],
+  ['synchronize_5fvsync_430',['synchronize_vsync',['../vsyncalter_8h.html#aff93933b34a0eef5f66027c463ab7886',1,'synchronize_vsync(double time_diff, int pipe=ALL_PIPES, double shift=0.01):&#160;vsyncalter.cpp'],['../vsyncalter_8cpp.html#acfdd07a98f7f72357f7c171dc834ac4d',1,'synchronize_vsync(double time_diff, int pipe, double shift):&#160;vsyncalter.cpp']]],
+  ['synctest_2ecpp_431',['synctest.cpp',['../synctest_8cpp.html',1,'']]]
+];

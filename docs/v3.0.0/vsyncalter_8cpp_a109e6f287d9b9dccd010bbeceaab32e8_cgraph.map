@@ -1,0 +1,4 @@
+<map id="vblank_handler" name="vblank_handler">
+<area shape="rect" id="node1" title="The function which will be called whenever a VBLANK occurs." alt="" coords="5,5,128,32"/>
+<area shape="rect" id="node2" href="$vsyncalter_8cpp.html#aa5b2359b39d48f12b1e5698243aa677c" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="176,5,307,32"/>
+</map>

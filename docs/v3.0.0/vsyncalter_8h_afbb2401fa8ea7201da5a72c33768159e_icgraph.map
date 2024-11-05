@@ -1,0 +1,7 @@
+<map id="get_vblank_interval" name="get_vblank_interval">
+<area shape="rect" id="node1" title="This function collects vblank timestamps and prints average interval between them." alt="" coords="289,56,440,83"/>
+<area shape="rect" id="node2" href="$synctest_8cpp.html#a049c841403301e23cad5dbb474f448a0" title="This function is the background thread task to call print_vblank_interval." alt="" coords="108,5,241,32"/>
+<area shape="rect" id="node3" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,31,60,57"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a67b9db8ab250881ca227a14cd03c9126" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="119,107,231,133"/>
+<area shape="rect" id="node5" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,107,60,133"/>
+</map>

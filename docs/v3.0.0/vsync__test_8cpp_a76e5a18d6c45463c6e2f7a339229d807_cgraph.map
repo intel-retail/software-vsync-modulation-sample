@@ -1,0 +1,4 @@
+<map id="client_close_signal" name="client_close_signal">
+<area shape="rect" id="node1" title="This function closes the client&#39;s socket." alt="" coords="5,5,151,32"/>
+<area shape="rect" id="node2" href="$vsyncalter_8h.html#a4cebd29204563e368cde9604f0bcbb50" title="Sets a global flag to indicate client app termination via Ctrl+C." alt="" coords="199,5,307,32"/>
+</map>

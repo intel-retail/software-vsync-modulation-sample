@@ -1,0 +1,4 @@
+<map id="connection::send_msg" name="connection::send_msg">
+<area shape="rect" id="node1" title=" " alt="" coords="5,5,172,32"/>
+<area shape="rect" id="node2" href="$classconnection.html#a535d212e860d1a615e69f524ad91a274" title="This function sends a message to the other system using the send API." alt="" coords="220,5,400,32"/>
+</map>

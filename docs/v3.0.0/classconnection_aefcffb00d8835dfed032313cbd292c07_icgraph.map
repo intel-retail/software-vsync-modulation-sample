@@ -1,0 +1,5 @@
+<map id="connection::accept_client" name="connection::accept_client">
+<area shape="rect" id="node1" title="This function waits until a client connects to it. It uses the accept API to listen in for any incomi..." alt="" coords="252,5,396,47"/>
+<area shape="rect" id="node2" href="$vsync__test_8cpp.html#a52fcd440c288502d65dab7591e82cb95" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="108,13,204,39"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,13,60,39"/>
+</map>

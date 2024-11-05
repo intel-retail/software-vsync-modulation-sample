@@ -1,0 +1,5 @@
+<map id="set_log_level" name="set_log_level">
+<area shape="rect" id="node1" title="This function sets the logging level for the application. The logging level determines the severity o..." alt="" coords="161,31,269,57"/>
+<area shape="rect" id="node2" href="$synctest_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="32,5,87,32"/>
+<area shape="rect" id="node3" href="$debug_8h.html#a979d26d237a2c8080916e44700367cf1" title="This function sets the logging level for the application via string parameter. The logging level dete..." alt="" coords="5,56,113,83"/>
+</map>

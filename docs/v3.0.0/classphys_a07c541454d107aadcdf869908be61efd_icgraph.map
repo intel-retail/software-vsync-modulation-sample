@@ -1,0 +1,6 @@
+<map id="phys::get_timer" name="phys::get_timer">
+<area shape="rect" id="node1" title=" " alt="" coords="231,56,355,83"/>
+<area shape="rect" id="node2" href="$classc10.html#ad95fd0a52c1bf6cc9cadbefa5bad2efd" title="This function waits until the C10 programming is finished. There is a timer for which time the new va..." alt="" coords="16,5,172,32"/>
+<area shape="rect" id="node3" href="$classcombo.html#a3a89a99a4845a01f979c0ff2b26b6db1" title="This function waits until the Combo programming is finished. There is a timer for which time the new ..." alt="" coords="5,56,183,83"/>
+<area shape="rect" id="node4" href="$classdkl.html#a4d1403b5ab2de6a44ff6bdbc722787e2" title="This function waits until the DKL programming is finished. There is a timer for which time the new va..." alt="" coords="17,107,171,133"/>
+</map>

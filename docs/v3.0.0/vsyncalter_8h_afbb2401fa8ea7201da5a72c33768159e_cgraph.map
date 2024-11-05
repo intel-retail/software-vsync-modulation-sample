@@ -1,0 +1,8 @@
+<map id="get_vblank_interval" name="get_vblank_interval">
+<area shape="rect" id="node1" title="This function collects vblank timestamps and prints average interval between them." alt="" coords="5,81,156,108"/>
+<area shape="rect" id="node2" href="$vsyncalter_8cpp.html#a1ba8490a15285f7f92273235530e548a" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="204,81,292,108"/>
+<area shape="rect" id="node3" href="$vsyncalter_8cpp.html#a207d247b175aba8213284ecf344ddd77" title="This function closes an open handle." alt="" coords="348,5,455,32"/>
+<area shape="rect" id="node4" href="$vsyncalter_8cpp.html#aa4cbfb6dcebfe97b9923cbc44394cc1f" title="This function opens /dev/dri/card0." alt="" coords="349,56,453,83"/>
+<area shape="rect" id="node5" href="$vsyncalter_8cpp.html#aa5b2359b39d48f12b1e5698243aa677c" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="511,132,641,159"/>
+<area shape="rect" id="node6" href="$vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8" title="The function which will be called whenever a VBLANK occurs." alt="" coords="340,157,463,184"/>
+</map>

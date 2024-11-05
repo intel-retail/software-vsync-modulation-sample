@@ -1,0 +1,5 @@
+<map id="c10::reset_phy_regs" name="c10::reset_phy_regs">
+<area shape="rect" id="node1" title="This is an object function called by the timer callback and actually calls program_mmio()." alt="" coords="5,5,157,32"/>
+<area shape="rect" id="node2" href="$classc10.html#aceeffb90ae422e88d6a8a7fbe4bcf2f8" title="This function programs the MMIO (Memory&#45;Mapped I/O) registers of the C10 PHY. It writes the specified..." alt="" coords="205,5,359,32"/>
+<area shape="rect" id="node3" href="$classphys.html#ad73924fe8d62296f92fb6b5776ebd91a" title=" " alt="" coords="407,5,511,32"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="connection::set_server" name="connection::set_server">
+<area shape="rect" id="node1" title="This function sets server characteristics like portid." alt="" coords="487,31,656,57"/>
+<area shape="rect" id="node2" href="$classconnection.html#a60cce1534f624b7db9b09c5377f9fab5" title="This function initalizes the client, by opening the socket and connecting to the server." alt="" coords="271,5,436,32"/>
+<area shape="rect" id="node5" href="$classconnection.html#a96130f5b9d6d63d51c35dc746988e8cc" title="This function initalizes the server by opening a socket, binding the server and listening for any inc..." alt="" coords="268,56,439,83"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a67b9db8ab250881ca227a14cd03c9126" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="108,5,220,32"/>
+<area shape="rect" id="node4" href="$vsync__test_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97" title="This is the main function." alt="" coords="5,31,60,57"/>
+<area shape="rect" id="node6" href="$vsync__test_8cpp.html#a52fcd440c288502d65dab7591e82cb95" title="This function takes all the actions of the primary system which are to initialize the server,..." alt="" coords="116,56,212,83"/>
+</map>

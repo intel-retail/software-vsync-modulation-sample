@@ -1,0 +1,4 @@
+<map id="mul_u32_u32" name="mul_u32_u32">
+<area shape="rect" id="node1" title="This is an inline function to multiply two 32&#45;bit numbers and return the result as a 64&#45;bit number." alt="" coords="192,5,301,32"/>
+<area shape="rect" id="node2" href="$classc10.html#a885c4cd7aaba3cce98c5693a72ca27b8" title="This function calculates pll values to achieve desired drift using the given shift value...." alt="" coords="5,5,144,32"/>
+</map>

@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['read_5foffset_5fdword_383',['READ_OFFSET_DWORD',['../mmio_8h.html#abd9831de0fe16d49322be131bf3383ad',1,'mmio.h']]],
+  ['read_5fval_384',['READ_VAL',['../combo_8h.html#add4c893ddcd7ae96882924f099ec801c',1,'combo.h']]],
+  ['readme_2emd_385',['README.md',['../_r_e_a_d_m_e_8md.html',1,'']]],
+  ['recv_5fmsg_386',['recv_msg',['../classconnection.html#a1ff5f4909852c11dbea214bb7e4b708e',1,'connection::recv_msg()'],['../classptp__connection.html#aeef27bcd3655a835dadd0d22fa79644e',1,'ptp_connection::recv_msg()']]],
+  ['recvfrom_5fmsg_387',['recvfrom_msg',['../classconnection.html#a8d26a5bf6691a16c27825b70debcd32d',1,'connection']]],
+  ['ref_5fclk_5ffreq_388',['REF_CLK_FREQ',['../common_8h.html#aa8c351e28ea63f3a274024ae52b0bff5',1,'common.h']]],
+  ['ref_5fcombo_5ffreq_389',['REF_COMBO_FREQ',['../common_8h.html#aa40f3c1157ccf9c5c4a315881a510d89',1,'common.h']]],
+  ['ref_5fdkl_5ffreq_390',['REF_DKL_FREQ',['../dkl_8h.html#ae1b2c8c92725075dc3b27a43f527c7eb',1,'dkl.h']]],
+  ['refin_391',['refin',['../mmio_8cpp.html#a1030ecc59533547ac3cdb96b0d1731e0',1,'mmio.cpp']]],
+  ['refout_392',['refout',['../mmio_8cpp.html#a596eb24ebb1a9587d61da9c6b8cbc9cd',1,'mmio.cpp']]],
+  ['reg_393',['reg',['../common_8h.html#structreg',1,'']]],
+  ['reg_394',['REG',['../common_8h.html#a72e45020e46f285689db51c46f273403',1,'common.h']]],
+  ['reg_5fbit8_395',['REG_BIT8',['../common_8h.html#a4e6a2d5661b9a52740f9ebe47497551a',1,'common.h']]],
+  ['reg_5ffield_5fget_396',['REG_FIELD_GET',['../c10_8h.html#aa8225c766c688546c9a1cca0a0691196',1,'c10.h']]],
+  ['reg_5ffield_5fget8_397',['REG_FIELD_GET8',['../c10_8h.html#a322d00731acc6b0105129665fd5fcc04',1,'c10.h']]],
+  ['reg_5ffield_5fprep_398',['REG_FIELD_PREP',['../c10_8h.html#a18ecbdcd0e56d278f7a1c44a7a94b1a7',1,'c10.h']]],
+  ['reg_5ffield_5fprep8_399',['REG_FIELD_PREP8',['../c10_8h.html#a10682d657de764ff013b831730c05dd9',1,'c10.h']]],
+  ['reg_5fgenmask_400',['REG_GENMASK',['../common_8h.html#ac7009c5e3a9de261bb00dcb8991e57e7',1,'common.h']]],
+  ['reg_5fgenmask8_401',['REG_GENMASK8',['../common_8h.html#a4d043ee57d06546576898053a8d8ada3',1,'common.h']]],
+  ['release_20notes_20for_20vsync_20v2_2e0_2e0_402',['Release Notes for vsync v2.0.0',['../md_release_notes_v2_0_0.html',1,'']]],
+  ['release_20notes_20for_20vsync_20v3_2e0_2e0_403',['Release Notes for vsync v3.0.0',['../md_release_notes_v3_0_0.html',1,'']]],
+  ['reset_5ffunc_404',['reset_func',['../common_8h.html#aaeb968dca7f3e8abad16ac8872a61076',1,'common.h']]],
+  ['reset_5fphy_5fregs_405',['reset_phy_regs',['../classc10.html#a7d411467ffea93496870b54cb36f65a8',1,'c10::reset_phy_regs(int sig, siginfo_t *si, void *uc)'],['../classc10.html#a04f02c7504245e059fcd65f49a7c56f8',1,'c10::reset_phy_regs(c10_phy_reg *dr)'],['../classdkl.html#aaf81cfdc9a1ebaf879958e547cf2a04d',1,'dkl::reset_phy_regs(dkl_phy_reg *dr)'],['../classdkl.html#a2c467dbd5229a9dade6b4654694e23ae',1,'dkl::reset_phy_regs(int sig, siginfo_t *si, void *uc)'],['../classcombo.html#a1264df5234df25a4458b4d225cfff300',1,'combo::reset_phy_regs(combo_phy_reg *dr)'],['../classcombo.html#a3c03e5e9e2a56b48ff9c6ea66bce184a',1,'combo::reset_phy_regs(int sig, siginfo_t *si, void *uc)']]],
+  ['rom_5fbase_5faddr_406',['rom_base_addr',['../mmio_8h.html#a3ff01763d1963a5286f93c917a714af8',1,'gfx_pci_device']]],
+  ['rom_5fsize_407',['rom_size',['../mmio_8h.html#a53d54d2163c7fcc670d51641b057c51a',1,'gfx_pci_device']]]
+];

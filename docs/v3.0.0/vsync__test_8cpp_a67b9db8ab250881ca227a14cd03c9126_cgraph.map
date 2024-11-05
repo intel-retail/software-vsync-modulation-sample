@@ -1,0 +1,27 @@
+<map id="do_secondary" name="do_secondary">
+<area shape="rect" id="node1" title="This function takes all the actions of the secondary system which are to initialize the client,..." alt="" coords="5,335,117,361"/>
+<area shape="rect" id="node2" href="$classmsg.html#afd7a95745e29979cf9627a4210e7357d" title=" " alt="" coords="214,5,295,32"/>
+<area shape="rect" id="node3" href="$vsync__test_8cpp.html#a049c841403301e23cad5dbb474f448a0" title="This function is the background thread task to call print_vblank_interval." alt="" coords="188,157,321,184"/>
+<area shape="rect" id="node4" href="$vsyncalter_8h.html#afbb2401fa8ea7201da5a72c33768159e" title="This function collects vblank timestamps and prints average interval between them." alt="" coords="414,132,565,159"/>
+<area shape="rect" id="node10" href="$classconnection.html#a3d335b9486ca22756dd42d19220fabf9" title="Closes a client&#39;s connection to the server." alt="" coords="165,208,344,235"/>
+<area shape="rect" id="node11" href="$classmsg.html#aca32be687763138892c26f7a2699743b" title=" " alt="" coords="179,259,331,285"/>
+<area shape="rect" id="node12" href="$vsync__test_8cpp.html#a7b625e8a9a83c76fb85606039a5051ad" title="This function finds the average of all the vertical syncs that have been provided by the primary syst..." alt="" coords="216,309,293,336"/>
+<area shape="rect" id="node13" href="$classmsg.html#a213e463e2f59d260448a163eb060bf26" title=" " alt="" coords="203,360,306,387"/>
+<area shape="rect" id="node14" href="$vsyncalter_8h.html#ac60432ce7a758749c9a717e9e7668850" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="635,56,723,83"/>
+<area shape="rect" id="node15" href="$classconnection.html#a60cce1534f624b7db9b09c5377f9fab5" title="This function initalizes the client, by opening the socket and connecting to the server." alt="" coords="172,411,337,437"/>
+<area shape="rect" id="node19" href="$vsync__test_8cpp.html#a2d575aeb5e2785705d4383ffea88b270" title="This function prints out the last N vsyncs that the system has received either on its own or from ano..." alt="" coords="203,461,307,488"/>
+<area shape="rect" id="node20" href="$classconnection.html#a1ff5f4909852c11dbea214bb7e4b708e" title=" " alt="" coords="173,512,337,539"/>
+<area shape="rect" id="node22" href="$classconnection.html#ab01fb91d5a4897cc26dd81ca1dfdf0f2" title=" " alt="" coords="171,563,338,589"/>
+<area shape="rect" id="node24" href="$classmsg.html#a6b0ca021f3b4c06146c433bb72e58c31" title=" " alt="" coords="169,613,341,640"/>
+<area shape="rect" id="node25" href="$vsyncalter_8h.html#aff93933b34a0eef5f66027c463ab7886" title="This function synchronizes the primary and secondary systems vsync. It is run on the secondary system..." alt="" coords="182,664,327,691"/>
+<area shape="rect" id="node5" href="$vsyncalter_8cpp.html#a1ba8490a15285f7f92273235530e548a" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="635,132,723,159"/>
+<area shape="rect" id="node6" href="$vsyncalter_8cpp.html#a207d247b175aba8213284ecf344ddd77" title="This function closes an open handle." alt="" coords="779,93,885,120"/>
+<area shape="rect" id="node7" href="$vsyncalter_8cpp.html#aa4cbfb6dcebfe97b9923cbc44394cc1f" title="This function opens /dev/dri/card0." alt="" coords="780,43,884,69"/>
+<area shape="rect" id="node8" href="$vsyncalter_8cpp.html#aa5b2359b39d48f12b1e5698243aa677c" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="941,144,1072,171"/>
+<area shape="rect" id="node9" href="$vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8" title="The function which will be called whenever a VBLANK occurs." alt="" coords="771,144,893,171"/>
+<area shape="rect" id="node16" href="$classconnection.html#af8f54a105505827800868b3af5ed6300" title="This function opens a TCP socket stream." alt="" coords="398,360,581,387"/>
+<area shape="rect" id="node17" href="$classconnection.html#ae106c525f92dc8b2edd92e78c835038b" title="pr_inet" alt="" coords="416,411,563,437"/>
+<area shape="rect" id="node18" href="$classconnection.html#a165e78d186cc8084ea81a2a31a6d0366" title="This function sets server characteristics like portid." alt="" coords="405,461,574,488"/>
+<area shape="rect" id="node21" href="$classconnection.html#a8d26a5bf6691a16c27825b70debcd32d" title=" " alt="" coords="392,512,587,539"/>
+<area shape="rect" id="node23" href="$classconnection.html#a535d212e860d1a615e69f524ad91a274" title="This function sends a message to the other system using the send API." alt="" coords="399,563,579,589"/>
+</map>

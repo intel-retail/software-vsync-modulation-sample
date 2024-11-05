@@ -1,0 +1,4 @@
+<map id="ptp_connection::recv_msg" name="ptp_connection::recv_msg">
+<area shape="rect" id="node1" title="This function receives a message from a source address using recvfrom API." alt="" coords="5,5,197,32"/>
+<area shape="rect" id="node2" href="$classconnection.html#a8d26a5bf6691a16c27825b70debcd32d" title=" " alt="" coords="245,5,440,32"/>
+</map>

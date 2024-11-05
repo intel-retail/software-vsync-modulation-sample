@@ -1,0 +1,18 @@
+<map id="do_msg" name="do_msg">
+<area shape="rect" id="node1" title="This function is used by the server side to get last 10 vsyncs, send them to the client and receive a..." alt="" coords="5,208,79,235"/>
+<area shape="rect" id="node2" href="$classmsg.html#a2fd09f5f1b1b1a4520bbe5bda12c711c" title=" " alt="" coords="154,5,273,32"/>
+<area shape="rect" id="node3" href="$classmsg.html#a4f27d8dcfc1b176228c9beb32fd9904f" title=" " alt="" coords="150,56,277,83"/>
+<area shape="rect" id="node4" href="$classmsg.html#a4e2cef31d72aef6c076dd9ca0c8491e7" title=" " alt="" coords="156,107,271,133"/>
+<area shape="rect" id="node5" href="$classmsg.html#a213e463e2f59d260448a163eb060bf26" title=" " alt="" coords="162,157,265,184"/>
+<area shape="rect" id="node6" href="$classmsg.html#a5a9a59ba1990ba6912d7d5dd0973f1d0" title=" " alt="" coords="127,208,300,235"/>
+<area shape="rect" id="node7" href="$vsyncalter_8h.html#ac60432ce7a758749c9a717e9e7668850" title="This function gets a list of vsyncs for the number of times indicated by the caller and provide their..." alt="" coords="169,259,257,285"/>
+<area shape="rect" id="node12" href="$vsync__test_8cpp.html#a2d575aeb5e2785705d4383ffea88b270" title="This function prints out the last N vsyncs that the system has received either on its own or from ano..." alt="" coords="161,309,265,336"/>
+<area shape="rect" id="node13" href="$classconnection.html#a1ff5f4909852c11dbea214bb7e4b708e" title=" " alt="" coords="131,360,295,387"/>
+<area shape="rect" id="node15" href="$classconnection.html#ab01fb91d5a4897cc26dd81ca1dfdf0f2" title=" " alt="" coords="130,411,297,437"/>
+<area shape="rect" id="node8" href="$vsyncalter_8cpp.html#a207d247b175aba8213284ecf344ddd77" title="This function closes an open handle." alt="" coords="392,157,499,184"/>
+<area shape="rect" id="node9" href="$vsyncalter_8cpp.html#aa4cbfb6dcebfe97b9923cbc44394cc1f" title="This function opens /dev/dri/card0." alt="" coords="393,208,497,235"/>
+<area shape="rect" id="node10" href="$vsyncalter_8cpp.html#aa5b2359b39d48f12b1e5698243aa677c" title="This function determines the type of vblank synchronization to use for the output." alt="" coords="591,284,721,311"/>
+<area shape="rect" id="node11" href="$vsyncalter_8cpp.html#a109e6f287d9b9dccd010bbeceaab32e8" title="The function which will be called whenever a VBLANK occurs." alt="" coords="384,309,507,336"/>
+<area shape="rect" id="node14" href="$classconnection.html#a8d26a5bf6691a16c27825b70debcd32d" title=" " alt="" coords="348,360,543,387"/>
+<area shape="rect" id="node16" href="$classconnection.html#a535d212e860d1a615e69f524ad91a274" title="This function sends a message to the other system using the send API." alt="" coords="355,411,535,437"/>
+</map>

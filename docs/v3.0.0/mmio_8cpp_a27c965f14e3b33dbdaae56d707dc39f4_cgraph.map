@@ -1,0 +1,5 @@
+<map id="map_mmio" name="map_mmio">
+<area shape="rect" id="node1" title="This functions maps the MMIO region." alt="" coords="5,31,101,57"/>
+<area shape="rect" id="node2" href="$mmio_8cpp.html#a2fbf38be7295d345a8dd72b4c618cf4f" title="Looks up the main graphics pci device using libpciaccess." alt="" coords="162,5,317,32"/>
+<area shape="rect" id="node3" href="$mmio_8cpp.html#ada91c2b510d23f69cb4af413ffc9384d" title="Fill a mmio_data stucture with igt_mmio to point at the mmio bar." alt="" coords="149,56,329,83"/>
+</map>
