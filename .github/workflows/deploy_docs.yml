@@ -3,8 +3,7 @@
 name: Deploy Doxygen Documentation
 
 # Declare default permissions as read only.
-permissions:
-  contents: read
+# permissions: read-all
 
 on:
   push:
@@ -90,10 +89,7 @@ jobs:
           git add -A
           git commit -m "Deploy Doxygen documentation for version $VERSION"
 
-      # Push changes to gh-pages using the GITHUB_TOKEN for authentication
-      - name: Push changes
-        uses: ad-m/github-push-action@gh-pages
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Push changes to gh-pages using the GITHUB_TOKEN for authentication
+          git push --force origin gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
