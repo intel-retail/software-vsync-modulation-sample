@@ -50,16 +50,15 @@ source "$SCRIPT_DIR/config.sh"
 # Ensure the client directory exists
 ssh $SECONDARY_ADDRESS "mkdir -p $CLIENT_DIR"
 
-# Copy the executable to the client
-echo "Copying executable to the Secondary ..."
-scp "$PRIMARY_PROJ_PATH/test/$EXECUTABLE_NAME" "$SECONDARY_ADDRESS:$CLIENT_DIR/" 2>/dev/null
+# Copy executable to the client
+echo "Copying executables to the Secondary ..."
+scp "$PRIMARY_PROJ_PATH/$VSYNCTEST_APP" "$PRIMARY_PROJ_PATH/$SYNCTEST_APP" "$PRIMARY_PROJ_PATH/$VBLTEST_APP" "$SECONDARY_ADDRESS:$CLIENT_DIR/" 2>/dev/null
 
-
-COMMAND="$PRIMARY_PROJ_PATH/test/$EXECUTABLE_NAME -m pri -i $PRIMARY_INERFACE"
+COMMAND="$PRIMARY_PROJ_PATH/$VSYNCTEST_APP -m pri -i $PRIMARY_INERFACE -e $PRIMARY_DEVICE "
 echo "PRIMARY Command  : $COMMAND"
 PRIMARY_COMMANDS_VSYNC="$SUDO $COMMAND 2>&1 | tee  $LOG_DIR$PRIMARY_LOG_VSYNC &"
 
-COMMAND="$CLIENT_DIR/$EXECUTABLE_NAME -m sec -i $SECONDARY_INTERFACE -c $PRIMARY_ETH_ADDR -d 100 -s 0.01"
+COMMAND="$CLIENT_DIR/$VSYNCTEST -m sec -i $SECONDARY_INTERFACE -c $PRIMARY_ETH_ADDR -e $SECONDARY_DEVICE -d 100 -s 0.01"
 echo "SECONDARY Command: $COMMAND"
 SECONDARY_COMMANDS_VSYNC="$SUDO $COMMAND &"
 
@@ -75,10 +74,10 @@ ssh $SECONDARY_ADDRESS "$SECONDARY_COMMANDS_VSYNC" 2>&1 | tee $LOG_DIR$SECONDARY
 cleanup() {
     echo "Cleaning up..."
     # Commands to stop ptp4l and phc2sys on the primary machine
-    PRIMARY_STOP_COMMANDS_VSYNC="$SUDO kill -SIGINT \$(pgrep $EXECUTABLE_NAME) 2>/dev/null"
+    PRIMARY_STOP_COMMANDS_VSYNC="$SUDO kill -SIGINT \$(pgrep $VSYNCTEST) 2>/dev/null"
 
     # Commands to stop ptp4l and phc2sys on the secondary machine
-    SECONDARY_STOP_COMMANDS_VSYNC="$SUDO kill -SIGINT \$(pgrep $EXECUTABLE_NAME) 2>/dev/null"
+    SECONDARY_STOP_COMMANDS_VSYNC="$SUDO kill -SIGINT \$(pgrep $VSYNCTEST) 2>/dev/null"
 
     # Stop commands on the secondary machine via SSH
     echo "Stopping commands on the secondary machine..."

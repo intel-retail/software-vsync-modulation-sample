@@ -47,7 +47,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@$(CXX) $(DBG_FLAGS) $(CXXFLAGS) -c $< -o $@
 
 debug:
-	@export DBG_FLAGS='-g -D DEBUGON'; \
+	@export DBG_FLAGS='-g -O0 -D DEBUGON'; \
 	$(MAKE)
 
 # Include dependency files

@@ -32,21 +32,62 @@
 #include "combo.h"
 
 combo_phy_reg combo_table[] = {
-	{REG(DPLL0_CFGCR0), REG(DPLL0_CFGCR1), 0, 1},
-	{REG(DPLL1_CFGCR0), REG(DPLL1_CFGCR1), 0, 1},
-	{REG(DPLL2_CFGCR0), REG(DPLL2_CFGCR1), 0, 1},
-	{REG(DPLL3_CFGCR0), REG(DPLL3_CFGCR1), 0, 1},
+	{REG(DPLL0_CFGCR0), REG(DPLL0_CFGCR1), 0},
+	{REG(DPLL1_CFGCR0), REG(DPLL1_CFGCR1), 0},
+	{REG(DPLL2_CFGCR0), REG(DPLL2_CFGCR1), 0},
+	{REG(DPLL3_CFGCR0), REG(DPLL3_CFGCR1), 0},
 };
 
-combo::combo(ddi_sel *ds)
+div_val pdiv_table[4] = {
+	{1, 2},
+	{2, 3},
+	{4, 5},
+	{8, 7},
+};
+
+div_val kdiv_table[3] = {
+	{1, 1},
+	{2, 2},
+	{4, 3},
+};
+
+register_info reg_cfgcr0 = { "CFGCR0",
+							{{"DCO Integer", 0, 9},  // 10 bits
+							{"DCO Fraction", 10, 24}, // 15 bits
+							{"SSC enable", 25, 25},
+							{"", 0, 0}} };
+
+register_info reg_cfgcr1 = { "CFGCR1",
+							{{"C Frequency", 0, 1},
+							{"Pdiv", 2, 5},
+							{"Kdiv", 6, 8},
+							{"Qdiv Mode", 9, 9},
+							{"Qdiv Ratio", 10, 17},
+							{"", 0, 0}} };
+
+/**
+ * @brief Constructor for a new combo::combo
+ *
+ * @param ds
+ * @param pipe
+ */
+combo::combo(ddi_sel* ds, int _pipe) : phys(_pipe)
 {
+	TRACING();
 	int dpclk;
+	combo_phy = {};
+	dpll_num = 0;
+
+	if (!ds) {
+		ERR("ddi_sel pointer is null\n");
+		return;
+	}
 
 	// Read DPCLKA_CFGCR0 or DPCLKA_CFGCR1 depending upon which DDI is enabled
 	dpclk = READ_OFFSET_DWORD(ds->dpclk.addr);
 	DBG("0x%X = 0x%X\n", ds->dpclk.addr, dpclk);
 	// DPCLKA_CFGCR must have the DDI's clock bit set to 0 (turned on)
-	if(dpclk & BIT(ds->clock_bit)) {
+	if (dpclk & BIT(ds->clock_bit)) {
 		ERR("Clock is Off. dpclk = 0x%X, clock bit = 0x%X\n", dpclk, ds->clock_bit);
 		return;
 	}
@@ -55,232 +96,190 @@ combo::combo(ddi_sel *ds)
 	// assume that the high order bit is just one more than the
 	// low order bit
 	ds->dpll_num = GETBITS_VAL(dpclk,
-			ds->mux_select_low_bit+1,
-			ds->mux_select_low_bit);
+		ds->mux_select_low_bit + 1,
+		ds->mux_select_low_bit);
 	DBG("DPLL num = 0x%X\n", ds->dpll_num);
 
-	if(ds->dpll_num >= ARRAY_SIZE(combo_table)) {
+	if (ds->dpll_num >= ARRAY_SIZE(combo_table)) {
 		ERR("Dpll number (0x%X) is higher than combo table size.", ds->dpll_num);
 		return;
 	}
+
 	// One PHY should be connected to one display only
-	if(!combo_table[ds->dpll_num].enabled) {
+	if (!combo_table[ds->dpll_num].enabled) {
 		combo_table[ds->dpll_num].enabled = 1;
-		ds->phy_data = &combo_table[ds->dpll_num];
+		combo_phy = &combo_table[ds->dpll_num];
 		set_ds(ds);
 		set_init(true);
+		done = 1;
 	}
+
+	phy_type = COMBO;
 }
 
 /**
-* @brief
-* This function finds the value from a bit within a table
-* @param *dt - This is the table to search for a val from.
-* @param dt_size - The size of this table
-* @param bit - The bit to search for
-* @return The value to return corresponding to the bit
-*/
-int get_val_from_bit(div_val *dt, int dt_size, int bit)
+ * @brief Destructor for combo
+ *
+ */
+combo::~combo()
 {
-	int i, val = 0;
-	for(i = 0; i < dt_size; i++) {
-		if(dt[i].bit == bit) {
-			val = dt[i].val;
-			break;
-		}
-	}
-	if(i >= dt_size) {
-		ERR("Couldn't find the right val from the table given this bit\n");
-	}
-	return val;
+	ddi_sel* ds = get_ds();
+	combo_table[ds->dpll_num].enabled = 0;
 }
 
 /**
-* @brief
-* This function programs Combo phys on the system
-* @param time_diff - This is the time difference in between the primary and the
-* secondary systems in ms. If master is ahead of the slave , then the time
-* difference is a positive number otherwise negative.
-* @param *t - A pointer to a pointer where we need to store the timer
-* @return void
-*/
-void combo::program_phy(double time_diff, double shift)
-{
-	div_val pdiv_table[4] = {
-		{1, 2},
-		{2, 3},
-		{4, 5},
-		{8, 7},
-	};
-
-	div_val kdiv_table[3] = {
-		{1, 1},
-		{2, 2},
-		{4, 3},
-	};
-	ddi_sel *ds = get_ds();
-	combo_phy_reg *combo_phy = (combo_phy_reg *) ds->phy_data;
-
-
-	READ_VAL(cfgcr0, orig_val);
-	READ_VAL(cfgcr1, orig_val);
-
-	if(time_diff < 0) {
-		shift *= -1;
-	}
-
-	int steps = CALC_STEPS_TO_SYNC(time_diff, shift);
-	DBG("steps are %d\n", steps);
-
-	DBG("OLD VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
-			combo_phy->cfgcr0.addr, combo_phy->cfgcr0.orig_val,
-			combo_phy->cfgcr1.addr, combo_phy->cfgcr1.orig_val);
-
-	// Symbol clock frequency in MHz (base) = DCO Divider// Reference frequency in MHz /  (5// Pdiv// Qdiv// Kdiv)
-	// DCO Divider comes from DPLL_CFGCR0 DCO Integer + (DPLL_CFGCR0 DCO Fraction / 2^15)
-	// Pdiv from DPLL_CFGCR1 Pdiv
-	// Qdiv from DPLL_CFGCR1 Qdiv Mode ? DPLL_CFGCR1 Qdiv Ratio : 1
-	// Kdiv from DPLL_CFGCR1 Kdiv
-	int i_fbdiv_intgr_9_0 = GETBITS_VAL(combo_phy->cfgcr0.orig_val, 9, 0);
-	int i_fbdivfrac_14_0 = GETBITS_VAL(combo_phy->cfgcr0.orig_val, 24, 10);
-	int pdiv_bit = GETBITS_VAL(combo_phy->cfgcr1.orig_val, 5, 2);
-	int pdiv = get_val_from_bit(pdiv_table, ARRAY_SIZE(pdiv_table), pdiv_bit);
-	int kdiv_bit = GETBITS_VAL(combo_phy->cfgcr1.orig_val, 8, 6);
-	int kdiv = get_val_from_bit(kdiv_table, ARRAY_SIZE(kdiv_table), kdiv_bit);
-	int qdiv_mode = combo_phy->cfgcr1.orig_val & BIT(9);
-	/* TODO: In case we run into some other weird dividers, then we may need to revisit this */
-	int qdiv = (kdiv == 2 && qdiv_mode == 1) ? GETBITS_VAL(combo_phy->cfgcr1.orig_val, 17, 10) : 1;
-	int ro_div_bias_frac = i_fbdivfrac_14_0 << 5 | ((i_fbdiv_intgr_9_0 & GENMASK(2, 0)) << 19);
-	int ro_div_bias_int = i_fbdiv_intgr_9_0 >> 3;
-	double dco_divider = 4*((double) ro_div_bias_int + ((double) ro_div_bias_frac / pow(2,22)));
-	double dco_clock = 2 * REF_COMBO_FREQ * dco_divider;
-	int deno = 5 * pdiv * qdiv * kdiv;
-	if (deno == 0) {
-		ERR("Denominator value zero causing divide by zero error.  Skipping synchronization\n");
-		return;
-	}
-	double pll_freq = dco_clock / deno;
-	double new_pll_freq = pll_freq + (shift * pll_freq / 100);
-	double new_dco_clock = dco_clock + (shift * dco_clock / 100);
-	double new_dco_divider = new_dco_clock / (2 * REF_COMBO_FREQ);
-	double new_ro_div_bias_frac = (new_dco_divider / 4 - (double) ro_div_bias_int) * pow(2,22);
-	if(new_ro_div_bias_frac > 0xFFFFF) {
-		i_fbdiv_intgr_9_0 += 1;
-		new_ro_div_bias_frac -= 0xFFFFF;
-	} else if (new_ro_div_bias_frac < 0) {
-		i_fbdiv_intgr_9_0 -= 1;
-		new_ro_div_bias_frac += 0xFFFFF;
-	}
-	double new_i_fbdivfrac_14_0  = ((long int) new_ro_div_bias_frac & ~BIT(19)) >> 5;
-
-	DBG("old pll_freq \t %f\n", pll_freq);
-	DBG("new_pll_freq \t %f\n", new_pll_freq);
-	DBG("old dco_clock \t %f\n", dco_clock);
-	DBG("new dco_clock \t %f\n", new_dco_clock);
-	DBG("old fbdivfrac \t 0x%X\n", (int) i_fbdivfrac_14_0);
-	DBG("old ro_div_frac \t 0x%X\n", ro_div_bias_frac);
-	DBG("old fbdivint \t 0x%X\n", i_fbdiv_intgr_9_0);
-	DBG("old ro_div_int \t 0x%X\n", ro_div_bias_int);
-	DBG("new fbdivfrac \t 0x%X\n", (int) new_i_fbdivfrac_14_0);
-	DBG("new ro_div_frac \t 0x%X\n", (int) new_ro_div_bias_frac);
-
-	combo_phy->cfgcr0.mod_val &= ~GENMASK(24, 0);
-	combo_phy->cfgcr0.mod_val |= i_fbdiv_intgr_9_0;
-	combo_phy->cfgcr0.mod_val |= (long) new_i_fbdivfrac_14_0 << 10;
-
-	DBG("NEW VALUES\n cfgcr0 [0x%X] =\t 0x%X\n", combo_phy->cfgcr0.addr,
-	combo_phy->cfgcr0.mod_val);
-
-	// For whichever PHY we find, let's set the done flag to 0 so that we can later
-	// have a timer for it to reset the default values back in their registers
-	combo_phy->done = 0;
-	user_info *ui = new user_info(this, combo_phy);
-	make_timer((long) steps, ui, reset_phy_regs);
-
-	program_mmio(combo_phy, 1);
-}
-
-/**
-* @brief
-*	This function waits until the Combo programming is
-*	finished. There is a timer for which time the new values will remain in
-*	effect. After that timer expires, the original values will be restored.
-* @param t - The timer which needs to be deleted
-* @return void
-*/
-void combo::wait_until_done()
+ * @brief
+ * This function called by phy class and delegate calculation
+ * to overloaded function.
+ *
+ * @return double - The calculated PLL clock
+ */
+double combo::calculate_pll_clock()
 {
 	TRACING();
+	uint32_t cfgcr0 = READ_OFFSET_DWORD(combo_phy->cfgcr0.addr);
+	uint32_t cfgcr1 = READ_OFFSET_DWORD(combo_phy->cfgcr1.addr);
+	return calculate_pll_clock(cfgcr0, cfgcr1);
+}
 
-	ddi_sel *ds = get_ds();
-	combo_phy_reg *combo_phy = (combo_phy_reg *) ds->phy_data;
+/**
+ * @brief
+ * This function calculates pll clock base on the cfgcr0 and cfgcr1 values
+ *
+ * @param cfgcr0 - The cfgcr0 register value
+ * @param cfgcr1 - The cfgcr1 register value
+ * @return double - The calculated PLL clock
+ */
+double combo::calculate_pll_clock(uint32_t cfgcr0, uint32_t cfgcr1)
+{
+	TRACING();
+	double refclock = REF_COMBO_FREQ * 1000;
+	int i_fbdiv_intgr_9_0 = GETBITS_VAL(cfgcr0, 9, 0);
+	int i_fbdivfrac_14_0 = GETBITS_VAL(cfgcr0, 24, 10);
+	double dco_freq = i_fbdiv_intgr_9_0 * refclock + ((i_fbdivfrac_14_0 * 2 * refclock) / 0x8000);
+	return dco_freq / 1000.0;  // Return as Khz
+}
 
-	// Wait to write back the original value.  Exit loop if Ctrl+C pressed
-	while(!combo_phy->done && !lib_client_done) {
-		usleep(1000);
+/**
+ * @brief
+ * This function calculates the feedback dividers for the PLL frequency
+ *
+ * @param pll_clock - The desired PLL frequency
+ * @return 0 - success, non zero - failure
+ */
+int combo::calculate_feedback_dividers(double pll_clock)
+{
+	TRACING();
+	// Construct integer and fraction parts
+	uint32_t new_i_fbdiv_intgr_9_0 = 0;
+	uint32_t new_i_fbdivfrac_14_0 = 0;
+
+	uint32_t cfgcr0 = READ_OFFSET_DWORD(combo_phy->cfgcr0.addr);
+	uint32_t cfgcr1 = READ_OFFSET_DWORD(combo_phy->cfgcr1.addr);
+	uint32_t cfgcr0_mod_val = cfgcr0;
+
+	calculate_feedback_dividers(pll_clock, cfgcr1, &new_i_fbdiv_intgr_9_0, &new_i_fbdivfrac_14_0);
+
+	cfgcr0_mod_val &= ~GENMASK(24, 0);
+	cfgcr0_mod_val |= new_i_fbdiv_intgr_9_0;
+	cfgcr0_mod_val |= (long)new_i_fbdivfrac_14_0 << 10;
+
+	uint32_t old_i_fbdiv_intgr_9_0 = GETBITS_VAL(cfgcr0, 9, 0);
+	uint32_t old_i_fbdivfrac_14_0 = GETBITS_VAL(cfgcr0, 24, 10);
+	INFO("\ti_fbdiv_intgr_9_0: 0x%X [%d] -> 0x%X [%d]\n", old_i_fbdiv_intgr_9_0, old_i_fbdiv_intgr_9_0, (int)new_i_fbdiv_intgr_9_0, (int)new_i_fbdiv_intgr_9_0);
+	INFO("\ti_fbdivfrac_14_0: 0x%X [%d] -> 0x%X [%d]\n", old_i_fbdivfrac_14_0, old_i_fbdivfrac_14_0, (int)new_i_fbdivfrac_14_0, (int)new_i_fbdivfrac_14_0);
+	INFO("\tcfgcr0[0x%X]: 0x%X -> 0x%X\n", combo_phy->cfgcr0.addr, cfgcr0, cfgcr0_mod_val);
+	INFO("\tcfgcr1[0x%X]: 0x%X\n", combo_phy->cfgcr1.addr, cfgcr1);
+
+	combo_phy->cfgcr0.mod_val = cfgcr0_mod_val;
+	// Update cfgcr1 even if it's not modified
+	combo_phy->cfgcr1.mod_val = cfgcr1;
+
+	return 0;
+}
+
+/**
+ * @brief
+ * This function calculates the feedback dividers for the PLL frequency
+ *
+ * @param pll_freq - The desired PLL frequency
+ * @param cfgcr1 - The cfgcr1 register value.  Not used for the time being.
+ * @param i_fbdiv_intgr_9_0 - Return value: The integer part of the feedback divider
+ * @param i_fbdivfrac_14_0 - Return value: The fractional part of the feedback divider
+ */
+void combo::calculate_feedback_dividers(double pll_clock, uint32_t cfgcr1, uint32_t* i_fbdiv_intgr_9_0, uint32_t* i_fbdivfrac_14_0)
+{
+	TRACING();
+	if (!i_fbdiv_intgr_9_0 || !i_fbdivfrac_14_0) {
+		ERR("Error: Null pointer for output values.\n");
+		return;
 	}
 
-	// Restore original values in case of app termination
-	if (lib_client_done) {
-		reset_phy_regs(combo_phy);
-	}
+	double refclock = REF_COMBO_FREQ * 1000;
+	pll_clock *= 1000;  // Convert to KHz
+	// Calculate the integer part
+	*i_fbdiv_intgr_9_0 = (uint32_t)(pll_clock / refclock);
 
-	timer_delete(get_timer());
+	// Calculate the remainder
+	uint64_t remainder = pll_clock - ((uint64_t)(*i_fbdiv_intgr_9_0) * refclock);
+
+	// Calculate the fractional part
+	*i_fbdivfrac_14_0 = (remainder * 0x8000) / (2 * refclock);
+}
+
+/**
+ * @brief
+ * This function reads the Combo Phy MMIO registers
+ * @param None
+ * @return void
+ */
+void combo::read_registers()
+{
+	TRACING();
+	combo_phy->cfgcr0.orig_val = READ_OFFSET_DWORD(combo_phy->cfgcr0.addr);
+	combo_phy->cfgcr1.orig_val = READ_OFFSET_DWORD(combo_phy->cfgcr1.addr);
+}
+
+/**
+ * @brief
+ * This function prints the register value
+ *
+ * @param None
+ * @return void
+ */
+void combo::print_registers()
+{
+	TRACING();
+	PRINT("Original Value ->\n");
+	print_register(combo_phy->cfgcr0.orig_val, combo_phy->cfgcr0.addr, &reg_cfgcr0);
+	print_register(combo_phy->cfgcr1.orig_val, combo_phy->cfgcr1.addr, &reg_cfgcr1);
+
+	PRINT("Updated Value ->\n");
+	print_register(combo_phy->cfgcr0.mod_val, combo_phy->cfgcr0.addr, &reg_cfgcr0);
+	print_register(combo_phy->cfgcr1.mod_val, combo_phy->cfgcr1.addr, &reg_cfgcr1);
 }
 
 /**
 * @brief
 * This function programs the Combo Phy MMIO registers
 * needed to move avsync period for a system.
-* @param *pr - The data structure that holds all of the PHY registers
-* that need to be programmed
 * @param mod - This parameter tells the function whether to program the original
 * values or the modified ones.
 * - 0 = Original
 * - 1 = modified
-* @return void
+* @return 0 - success, non zero - failure
 */
-void combo::program_mmio(combo_phy_reg *pr, int mod)
+int combo::program_mmio(int mod)
 {
+	TRACING();
+	WRITE_OFFSET_DWORD(combo_phy->cfgcr0.addr,
+		mod ? combo_phy->cfgcr0.mod_val : combo_phy->cfgcr0.orig_val);
 
-	WRITE_OFFSET_DWORD(pr->cfgcr0.addr,
-			mod ? pr->cfgcr0.mod_val : pr->cfgcr0.orig_val);
-
-}
-
-/**
-* @brief
-* This function resets the Combo Phy MMIO registers to their
-* original value. It gets executed whenever a timer expires. We program MMIO
-* registers of the PHY in this function becase we have waited for a certain
-* time period to get the primary and secondary systems vsync in sync and now
-* it is time to reprogram the default values for the secondary system's PHYs.
-* @param sig - The signal that fired
-* @param *si - A pointer to a siginfo_t, which is a structure containing
-* further information about the signal
-* @param *uc - This is a pointer to a ucontext_t structure, cast to void *.
-* The structure pointed to by this field contains signal context information
-* that was saved on the user-space stack by the kernel
-* @return void
-*/
-void combo::reset_phy_regs(int sig, siginfo_t *si, void *uc)
-{
-	user_info *ui = (user_info *) si->si_value.sival_ptr;
-	if(!ui) {
-		return;
+	if (!mod) {
+		DBG("DEFAULT VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
+			combo_phy->cfgcr0.addr, combo_phy->cfgcr0.orig_val, combo_phy->cfgcr1.addr, combo_phy->cfgcr1.orig_val);
 	}
 
-	DBG("timer done\n");
-	combo_phy_reg *cr = (combo_phy_reg *) ui->get_reg();
-	combo * c = (combo *) ui->get_type();
-	c->reset_phy_regs(cr);
-	delete ui;
+	return 0;
 }
 
-void combo::reset_phy_regs(combo_phy_reg *cr)
-{
-	program_mmio(cr, 0);
-	DBG("DEFAULT VALUES\n cfgcr0 [0x%X] =\t 0x%X\n cfgcr1 [0x%X] =\t 0x%X\n",
-			cr->cfgcr0.addr, cr->cfgcr0.orig_val, cr->cfgcr1.addr, cr->cfgcr1.orig_val);
-	cr->done = 1;
-}

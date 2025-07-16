@@ -26,6 +26,7 @@
 #define _COMMON_H
 
 #include <list>
+#include "utils.h"
 
 using namespace std;
 
@@ -35,7 +36,7 @@ using namespace std;
 #define ONE_SEC_IN_NS                 (1000 * 1000 * 1000)
 #define TV_NSEC(t)                    ((long) ((t * 1000000) % ONE_SEC_IN_NS))
 #define TV_SEC(t)                     ((time_t) ((t * 1000000) / ONE_SEC_IN_NS))
-#define TIME_IN_USEC(sec, usec)       (unsigned long) (1000000 * sec + usec)
+#define TIME_IN_USEC(sec, usec)       (uint64_t) (1000000 * (uint64_t)sec + usec)
 #define BIT(nr)                       (1UL << (nr))
 #define REG_BIT8                      BIT
 #define ARRAY_SIZE(a)                 (int) (sizeof(a)/sizeof(a[0]))
@@ -50,8 +51,11 @@ using namespace std;
 /*
  * td - The time difference in between the two systems in ms.
  * s  - The percentage shift that we need to make in our vsyncs.
+ *
+ * Note: Calling abs to ensure a positive 'step' value result in case if
+ * shift (s) is negative.
  */
-#define CALC_STEPS_TO_SYNC(td, s)     ((int) ((td * 100) / s))
+#define CALC_STEPS_TO_SYNC(td, s)     ((s) == 0 ? 0 : abs((int) ((td * 100) / (s))))
 #define MAX_DEVICE_ID                 40
 /* Per-pipe DDI Function Control */
 #define TRANS_DDI_FUNC_CTL_A          0x60400
@@ -68,6 +72,7 @@ using namespace std;
 enum {
 	DKL,
 	COMBO,
+	M_N,
 	C10,
 	C20,
 	TOTAL_PHYS,
@@ -84,13 +89,13 @@ class user_info {
 	void *phy_reg;
 	void *phy_type;
 	public:
-	user_info(void *t, void *r) { phy_type = t; phy_reg = r; }
+	user_info(void *t) { phy_type = t; }
 	void *get_type() { return phy_type; }
 	void *get_reg() { return phy_reg; }
 };
 
 typedef struct _vbl_info {
-	long *vsync_array;
+	uint64_t *vsync_array;
 	int size;
 	int counter;
 	int pipe;
@@ -110,28 +115,6 @@ typedef struct _ddi_sel {
 	void *phy_data;
 } ddi_sel;
 
-class phys {
-private:
-	bool init;
-	int pipe;
-	timer_t timer_id;
-	ddi_sel *m_ds;
-
-public:
-	phys() { init = false; timer_id = 0; m_ds = NULL; }
-	virtual ~phys() { }
-	bool is_init() { return init; }
-	void set_init(bool i) { init = i; }
-	int get_pipe() { return pipe; }
-	void set_pipe(int p) { pipe = p; }
-	timer_t get_timer() { return timer_id; }
-	void set_ds(ddi_sel *ds) { m_ds = ds; }
-	ddi_sel *get_ds() { return m_ds; }
-	int make_timer(long expire_ms, void *user_ptr, reset_func reset);
-
-	virtual void program_phy(double time_diff, double shift) = 0;
-	virtual void wait_until_done() = 0;
-};
 
 typedef struct _platform {
 	char name[20];
@@ -147,6 +130,6 @@ extern int lib_client_done;
 
 void timer_handler(int sig, siginfo_t *si, void *uc);
 unsigned int pipe_to_wait_for(int pipe);
-void cleanup_phy_list();
+int cleanup_phy_list();
 
 #endif

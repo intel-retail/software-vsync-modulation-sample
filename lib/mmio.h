@@ -57,9 +57,8 @@ extern int g_fd;
 extern int g_drm_fd;
 extern int g_init;
 
-int map_mmio();
-int map_cmn(int base_index, int size);
-void close_mmio_handle();
-int get_device_id();
+int map_mmio(const char *device_str);
+int close_mmio_handle();
+int get_device_id(const char *device_str);
 
 #endif
