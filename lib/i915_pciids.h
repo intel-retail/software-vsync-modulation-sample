@@ -134,4 +134,24 @@
     INTEL_MTL_P_IDS, \
     INTEL_ARL_P_IDS
 
+#define INTEL_PTL_IDS \
+    0xB080, \
+    0xB081, \
+    0xB082, \
+    0xB083, \
+    0xB08F, \
+    0xB090, \
+    0xB0A0, \
+    0xB0A1, \
+    0xB0A2, \
+    0xB0B0
+
+#define INTEL_WCL_IDS \
+    0xFD80, \
+    0xFD81
+
+#define INTEL_PTL_FAM_IDS \
+    INTEL_PTL_IDS, \
+    INTEL_WCL_IDS
+
 #endif

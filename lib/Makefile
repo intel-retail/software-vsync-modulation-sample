@@ -10,13 +10,15 @@ SRCDIR := .
 OBJDIR := obj
 INCLUDEDIR := include
 
+COVERAGE_FLAGS := -fprofile-arcs -ftest-coverage -O0 -g
+
 # Target libraries
 TARGET_SHARED := libvsyncalter.so
 TARGET_STATIC := libvsyncalter.a
 
 # Find source files, create a list of object files
 SOURCES := $(wildcard $(SRCDIR)/*.cpp)
-HEADERS := $(wildcard $(SRCDIR)/*.h ../cmn/*.h)
+HEADERS := $(wildcard $(SRCDIR)/*.h ../cmn/*.h $(SRCDIR)/platforms/*.h)
 OBJECTS := $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 DEPS := $(OBJECTS:.o=.d)  # Dependency files corresponding to object files
 
@@ -33,7 +35,7 @@ all: $(TARGET_SHARED) $(TARGET_STATIC)
 # Shared library
 $(TARGET_SHARED): $(OBJECTS)
 	$(CMD_PREFIX)echo "Creating shared library..."
-	$(CMD_PREFIX)$(CXX) -Wall -shared $(DBG_FLAGS) -o $@ $^ $(LIBS)
+	$(CMD_PREFIX)$(CXX) -Wall -shared $(CXXFLAGS)  $(DBG_FLAGS) -o $@ $^ $(LIBS)
 # Static library
 $(TARGET_STATIC): $(OBJECTS)
 	$(CMD_PREFIX)echo "Creating static library..."
@@ -48,8 +50,13 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(HEADERS)
 # Include the .d files
 -include $(DEPS)
 
+coverage:
+	@echo "Building static and shared libraries with coverage flags..."
+	$(MAKE) clean
+	$(MAKE) CXXFLAGS="$(CXXFLAGS) $(COVERAGE_FLAGS)" all
+
 debug:
-	@export DBG_FLAGS='-g -D DEBUGON'; \
+	@export DBG_FLAGS='-g -O0 -D DEBUGON'; \
 	$(MAKE)
 
 # Clean up build artifacts

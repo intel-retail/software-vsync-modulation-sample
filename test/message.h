@@ -39,7 +39,7 @@ class msg {
 protected:
 	header_t header;
 	timeval tv;
-	long vsync_array[MAX_TIMESTAMPS];
+	uint64_t vsync_array[VSYNC_MAX_TIMESTAMPS];
 	int vblank_count;
 public:
 	void ack() {
@@ -69,10 +69,10 @@ public:
 	}
 
 	header_t get_type() { return header; }
-	long *get_va() { return vsync_array; }
-	int get_size() { return MAX_TIMESTAMPS; }
+	uint64_t *get_va() { return vsync_array; }
+	int get_size() { return VSYNC_MAX_TIMESTAMPS; }
 	int is_client_present() { return header != CLOSE_MSG; }
-	int get_vblank_count() { return vblank_count; }	
+	int get_vblank_count() { return vblank_count; }
 };
 
 #endif

@@ -23,6 +23,7 @@
  */
 
 #include <stdio.h>
+#include <sys/stat.h>
 #include <math.h>
 #include <assert.h>
 #include <cerrno>
@@ -41,10 +42,13 @@
 #include <adl_s.h>
 #include <adl_p.h>
 #include <mtl.h>
+#include <ptl.h>
 #include "mmio.h"
 #include "dkl.h"
 #include "combo.h"
 #include "c10.h"
+#include "c20.h"
+#include "dp_m_n.h"
 #include "i915_pciids.h"
 
 platform platform_table[] = {
@@ -52,13 +56,16 @@ platform platform_table[] = {
 	{"ADL_S_FAM", {INTEL_ADL_S_FAM_IDS}, adl_s_ddi_sel, ARRAY_SIZE(adl_s_ddi_sel), 0},
 	{"ADL_P_FAM", {INTEL_ADL_P_FAM_IDS}, adl_p_ddi_sel, ARRAY_SIZE(adl_p_ddi_sel), 4},
 	{"MTL",       {INTEL_MTL_FAM_IDS},   mtl_ddi_sel,   ARRAY_SIZE(mtl_ddi_sel),   0},
+	{"PTL",       {INTEL_PTL_FAM_IDS},   ptl_ddi_sel,   ARRAY_SIZE(ptl_ddi_sel),   0},
 };
 
-int g_dev_fd = 0;
+#define DP_SST 0x2
+#define DP_MST 0x3
+
 int supported_platform = 0;
 list<phys *> *phy_enabled_list = NULL;
-
 int lib_client_done = 0;
+
 /**
 * @brief
 *	This function creates a timer.
@@ -76,7 +83,7 @@ int phys::make_timer(long expire_ms, void *user_ptr, reset_func reset)
 	struct sigaction        sa;
 	int                     sig_no = SIGRTMIN;
 
-	INFO("Setting timer for %d ms\n", expire_ms);
+	INFO("Setting timer for %.3f seconds\n", expire_ms/1000.0);
 	// Set up signal handler
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = reset;
@@ -87,6 +94,7 @@ int phys::make_timer(long expire_ms, void *user_ptr, reset_func reset)
 	}
 
 	// Set and enable alarm
+	te = {};
 	te.sigev_notify = SIGEV_SIGNAL;
 	te.sigev_signo = sig_no;
 	te.sigev_value.sival_ptr = user_ptr;
@@ -103,15 +111,19 @@ int phys::make_timer(long expire_ms, void *user_ptr, reset_func reset)
 
 /**
 * @brief
-* This function opens /dev/dri/card0
+* This function opens a device.  e.g /dev/dri/card0
 * @param None
 * @return
 * - 0 == SUCCESS
 * - <0 == FAILURE
 */
-int open_device()
+int open_device(const char *device_str)
 {
-	return open("/dev/dri/card0", O_RDWR | O_CLOEXEC, 0);
+	if (!device_str) {
+		ERR("Device string is NULL\n");
+		return -1;
+	}
+	return open(device_str, O_RDWR | O_CLOEXEC, 0);
 }
 
 /**
@@ -120,14 +132,14 @@ int open_device()
 * @param None
 * @return void
 */
-void close_device()
+void close_device(int fd)
 {
-	if(close(g_dev_fd) == -1){
+	if(close(fd) == -1){
 		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
 	}
 }
 
-int find_enabled_phys()
+int find_enabled_phys(bool m_n)
 {
 	int i, j, val, ddi_select;
 	reg trans_ddi_func_ctl[] = {
@@ -164,10 +176,14 @@ int find_enabled_phys()
 		val = READ_OFFSET_DWORD(trans_ddi_func_ctl[i].addr);
 		DBG("0x%X = 0x%X\n", trans_ddi_func_ctl[i].addr, val);
 		if(!(val & BIT(31))) {
-			DBG("Pipe %d is turned off\n", i+1);
+			DBG("Pipe %d is turned off\n", i); // 0 based index for pipe # printing
 			continue;
 		}
 
+		DBG("Pipe %d is turned on\n", i);
+
+		// TRANS_DDI_FUNC_CTL bits 26:24 tells us if it's a DP panel
+		uint32_t mode_select = GETBITS_VAL(val, 26, 24);
 
 		// TRANS_DDI_FUNC_CTL bits 30:27 have the DDI which this pipe is connected to
 		ddi_select = GETBITS_VAL(val, 30, 27);
@@ -177,29 +193,35 @@ int find_enabled_phys()
 			phys *new_phy = NULL;
 			// Match the DDI with the available ones on this platform
 			if(platform_table[supported_platform].ds[j].de_clk == ddi_select) {
-				switch(platform_table[supported_platform].ds[j].phy) {
-					case DKL:
-						DBG("Detected a DKL phy on pipe %d\n", i+1);
-						new_phy = new dkl(&platform_table[supported_platform].ds[j],
-							platform_table[supported_platform].first_dkl_phy_loc);
-						break;
-					case COMBO:
-						DBG("Detected a Combo phy on pipe %d\n", i+1);
-						new_phy = new combo(&platform_table[supported_platform].ds[j]);
-						break;
-					case C10:
-						DBG("Detected a C10 phy on pipe %d\n", i+1);
-						new_phy = new c10(&platform_table[supported_platform].ds[j]);
-						break;
-					case C20:
-						DBG("Detected a C20 phy on pipe %d. (Not implemented)\n", i+1);
-						break;
-					default:
-						ERR("Unsupported PHY. Phy is %d\n", platform_table[supported_platform].ds[j].phy);
-						return 1;
-						break;
+				if (m_n && (mode_select == DP_SST || mode_select == DP_MST )) {
+					DBG("Found DP Panel on pipe %d.  Using M & N Path\n", i);
+					new_phy = new dp_m_n(&platform_table[supported_platform].ds[j], i);
 				}
-
+				else {
+					switch(platform_table[supported_platform].ds[j].phy) {
+						case DKL:
+							DBG("Detected a DKL phy on pipe %d\n", i);
+							new_phy = new dkl(&platform_table[supported_platform].ds[j],
+								platform_table[supported_platform].first_dkl_phy_loc, i);
+							break;
+						case COMBO:
+							DBG("Detected a Combo phy on pipe %d\n", i);
+								new_phy = new combo(&platform_table[supported_platform].ds[j], i);
+								break;
+						case C10:
+							DBG("Detected a C10 phy on pipe %d\n", i);
+							new_phy = new c10(&platform_table[supported_platform].ds[j], i);
+							break;
+						case C20:
+							DBG("Detected a C20 phy on pipe %d\n", i);
+							new_phy = new c20(&platform_table[supported_platform].ds[j], i);
+							break;
+						default:
+							ERR("Unsupported PHY. Phy is %d\n", platform_table[supported_platform].ds[j].phy);
+							return 1;
+							break;
+					}
+				}
 				// Ignore PHYs that we don't support yet
 				if (new_phy == NULL) {
 					continue;
@@ -209,7 +231,7 @@ int find_enabled_phys()
 					delete new_phy;
 					return 1;
 				}
-				new_phy->set_pipe(i);
+
 				phy_enabled_list->push_back(new_phy);
 
 				// No point trying to find the same ddi if we have already found it once
@@ -224,18 +246,26 @@ int find_enabled_phys()
 * @brief
 * This function deallocates all members of the phy_enabled_list
 * @param None
-* @return void
+* @return int, 0 - success, non zero - failure
 */
-void cleanup_phy_list()
+
+int cleanup_phy_list()
 {
-	if(phy_enabled_list) {
-		for(list<phys *>::iterator it = phy_enabled_list->begin();
-		it != phy_enabled_list->end(); it++) {
+	if (!phy_enabled_list) {
+		return 0; // Nothing to clean up
+	}
+
+	for (std::list<phys *>::iterator it = phy_enabled_list->begin();
+		 it != phy_enabled_list->end(); ++it) {
+		if (*it) {
 			delete *it;
 		}
-		delete phy_enabled_list;
-		phy_enabled_list = NULL;
 	}
+
+	delete phy_enabled_list;
+	phy_enabled_list = NULL;
+
+	return 0; // Success
 }
 
 /**
@@ -256,7 +286,7 @@ void shutdown_lib(void)
 * @param None
 * @return void
 */
-void print_drm_info(void)
+int print_drm_info(const char *device_str)
 {
 	// This list covers most of the connector types that are supported by the DRM
 	const char* connector_type_str[] = {
@@ -283,10 +313,10 @@ void print_drm_info(void)
 		"USB"           // 20
 	};
 
-	int fd = open_device();
+	int fd = open_device(device_str);
 	if (fd < 0) {
-		ERR("Failed to open DRM device: %s\n", strerror(errno));
-		return ;
+		ERR("Failed to open DRM device: %s (%s)\n", device_str, strerror(errno));
+		return 1 ;
 	}
 
 	drmModeRes *resources = drmModeGetResources(fd);
@@ -295,7 +325,7 @@ void print_drm_info(void)
 		if(close(fd) == -1){
 			ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
 		}
-		return;
+		return 1;
 	}
 	INFO("DRM Info:\n");
 
@@ -347,7 +377,10 @@ void print_drm_info(void)
 	drmModeFreeResources(resources);
 	if(close(fd) == -1){
 		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+		return 1;
 	}
+
+	return 0;
 }
 
 /**
@@ -360,15 +393,26 @@ void print_drm_info(void)
 * - 0 == SUCCESS
 * - 1 == FAILURE
 */
-int vsync_lib_init()
+int vsync_lib_init(const char *device_str, bool dp_m_n)
 {
 	int device_id, i, j;
 	if(!IS_INIT()) {
-		// Show Pipe and CRTC info
-		print_drm_info();
+
+		if (!device_str) {
+			ERR("Device string is NULL\n");
+			return 1;
+		}
+
+		// Check if device string is valid
+		int fd = open_device(device_str);
+		if (fd < 0) {
+			ERR("Failed to open DRM device: %s (%s)\n", device_str, strerror(errno));
+			return 1;
+		}
+		close_device(fd);
 
 		// Get the device id of this platform
-		device_id = get_device_id();
+		device_id = get_device_id(device_str);
 		DBG("Device id is 0x%X\n", device_id);
 		// Loop through our supported platform list
 		for(i = 0; i < ARRAY_SIZE(platform_table); i++) {
@@ -389,11 +433,11 @@ int vsync_lib_init()
 			supported_platform = i;
 		}
 
-		if(map_mmio()) {
+		if(map_mmio(device_str)) {
 			return 1;
 		}
 
-		if(find_enabled_phys()) {
+		if(find_enabled_phys(dp_m_n)) {
 			vsync_lib_uninit();
 			return 1;
 		}
@@ -410,13 +454,25 @@ int vsync_lib_init()
 * and unmapping memory. It must be called at program exit or else we can have
 * memory leaks in the program.
 * @param None
-* @return void
+* @return int, 0 - success, non zero - failure
 */
-void vsync_lib_uninit()
+int vsync_lib_uninit()
 {
-	cleanup_phy_list();
-	close_mmio_handle();
-	UNINIT();
+	int status = 0;
+
+	if (cleanup_phy_list() != 0) {
+		ERR("Failed to clean up PHY list.\n");
+		status = 1;
+	}
+
+	if (close_mmio_handle() != 0) {
+		ERR("Failed to close MMIO handle.\n");
+		status = 1;
+	}
+
+	UNINIT(); // no return value assumed
+
+	return status;
 }
 
 /**
@@ -426,34 +482,74 @@ void vsync_lib_uninit()
 * that it finds out the default PHY register values, calculates a shift
 * based on the time difference provided by the caller and then reprograms the
 * PHY registers so that the secondary system can either slow down or speed up
-* its vsnyc durations.
+* its vsnyc durations. Drifts is applied as percentage shift to the original `pll_clock`.
+* The direction of adjustment is determined by `time_diff`:
+*	- A **positive `time_diff`** indicates that timestamps should drift forward, requiring a **decrease** in PLL frequency.
+*	  This increases the vblank time period, effectively delaying the timestamps.
+*	- A **negative `time_diff`** indicates that timestamps should drift backward, requiring an **increase** in PLL frequency.
+*	  This decreases the vblank time period, effectively advancing the timestamps.
 * @param time_diff - This is the time difference in between the primary and the
-* secondary systems in ms. If master is ahead of the slave , then the time
+* secondary systems in ms. If primary is ahead of the secondary , then the time
 * difference is a positive number otherwise negative.
 * @param pipe - This is the 0 based pipe number to synchronize vsyncs for. Note
 * that this variable is optional. So if the caller doesn't provide it or provides
 * ALL_PIPES as the value, then all pipes will be synchronized.
-* @return void
+* @param shift - This is the amount of shift that we need to apply
+* to the secondary system's vsync period. This is a positive floating point number
+* and to be considered as change fraction (e.g .01).
+* @param shift2 - Shift value for stepping mode
+* @param step_threshold - step_threshold  Delta threshold in microseconds to trigger stepping mode
+* @param wait_between_steps - Wait in milliseconds between steps
+* @param reset - This is a boolean value. If true, then we will reset the
+* registers to their original values after the shift has been applied.
+* @param commit - This is a boolean value. If false, then we will not program
+* the PHY registers. This is useful for debugging purposes.
+* @return int, 0 - success, non zero - failure
 */
-void synchronize_vsync(double time_diff, int pipe, double shift)
+int synchronize_vsync(double time_diff, int pipe, double shift, double shift2, int step_threshold,
+						int wait_between_steps, bool reset, bool commit)
 {
-	if(!IS_INIT()) {
-		ERR("Uninitialized lib, please call lib init first\n");
-		return;
+	if (!IS_INIT()) {
+		ERR("Uninitialized lib, please call lib_init() first.\n");
+		return 1;
+	}
+	if (fabs(time_diff) >= 20 || shift < 0.0 || shift2 < 0.0 || shift > 1.0 || shift2 > 1.0)
+		return 1;
+
+	if (!phy_enabled_list) {
+		ERR("PHY list not initialized.\n");
+		return 1;
 	}
 
-	if(phy_enabled_list) {
-		for(list<phys *>::iterator it = phy_enabled_list->begin();
-			it != phy_enabled_list->end(); it++) {
-				if(pipe == ALL_PIPES || pipe == (*it)->get_pipe()) {
-					// Program the phy
-					(*it)->program_phy(time_diff, shift);
+	bool matched = false;
+	int status = 0;
 
-					// Wait until it is done before moving on to the next phy
-					(*it)->wait_until_done();
-				}
+	for (std::list<phys *>::iterator it = phy_enabled_list->begin();
+		it != phy_enabled_list->end(); ++it) {
+
+		if (!*it) continue;
+
+		if (pipe == VSYNC_ALL_PIPES || pipe == (*it)->get_pipe()) {
+			matched = true;
+
+			if ((*it)->program_phy(time_diff, shift, shift2, step_threshold, wait_between_steps, reset, commit) != 0) {
+				ERR("Failed to program PHY on pipe %d.\n", (*it)->get_pipe());
+				status = 1;
+				continue;  // continue trying other PHYs
 			}
+
+			if (reset && commit) {
+				(*it)->wait_until_done();
+			}
+		}
 	}
+
+	if (!matched) {
+		ERR("No matching PHY found for pipe %d.\n", pipe);
+		return 1;
+	}
+
+	return status;
 }
 
 /**
@@ -481,7 +577,7 @@ static void vblank_handler(int fd, unsigned int frame, unsigned int sec,
 	vbl.request.sequence = 1;
 	vbl.request.signal = (unsigned long)data;
 
-	drmWaitVBlank(g_dev_fd, &vbl);
+	drmWaitVBlank(fd, &vbl);
 }
 
 /**
@@ -522,17 +618,38 @@ unsigned int pipe_to_wait_for(int pipe)
 * - 0 == SUCCESS
 * - 1 = ERROR
 */
-int get_vsync(long *vsync_array, int size, int pipe)
+int get_vsync(const char *device_str, uint64_t *vsync_array, int size, int pipe)
 {
 	drmVBlank vbl;
 	int ret;
 	drmEventContext evctx;
 	vbl_info handler_info;
 
-	g_dev_fd = open_device();
-	if(g_dev_fd < 0) {
-		ERR("Couldn't open /dev/dri/card0. Is i915 installed?\n");
-		return -1;
+	// Validate parameters
+	if (device_str == NULL || strlen(device_str) == 0) {
+		ERR("Invalid device string (NULL or empty)\n");
+		return 1;
+	}
+
+	if (vsync_array == NULL) {
+		ERR("NULL vsync_array pointer provided\n");
+		return 1;
+	}
+
+	if (size <= 0) {
+		ERR("Invalid size (must be > 0): %d\n", size);
+		return 1;
+	}
+
+	if (size > VSYNC_MAX_TIMESTAMPS) {
+		ERR("Requested size (%d) exceeds VSYNC_MAX_TIMESTAMPS (%d)\n", size, VSYNC_MAX_TIMESTAMPS);
+		return 1;
+	}
+
+	int fd = open_device(device_str);
+	if(fd < 0) {
+		ERR("Couldn't open %s. Is i915 installed?\n", device_str);
+		return 1;
 	}
 
 	memset(&vbl, 0, sizeof(drmVBlank));
@@ -548,11 +665,11 @@ int get_vsync(long *vsync_array, int size, int pipe)
 	DBG("vbl.request.type = 0x%X\n", vbl.request.type);
 	vbl.request.sequence = 1;
 	vbl.request.signal = (unsigned long)&handler_info;
-	ret = drmWaitVBlank(g_dev_fd, &vbl);
+	ret = drmWaitVBlank(fd, &vbl);
 	if (ret) {
 		ERR("drmWaitVBlank (relative, event) failed ret: %i\n", ret);
-		close_device();
-		return -1;
+		close_device(fd);
+		return 1;
 	}
 
 	// Set up our event handler
@@ -568,23 +685,23 @@ int get_vsync(long *vsync_array, int size, int pipe)
 
 		FD_ZERO(&fds);
 		FD_SET(0, &fds);
-		FD_SET(g_dev_fd, &fds);
-		ret = select(g_dev_fd + 1, &fds, NULL, NULL, &timeout);
+		FD_SET(fd, &fds);
+		ret = select(fd + 1, &fds, NULL, NULL, &timeout);
 
 		if (ret <= 0) {
 			ERR("select timed out or error (ret %d)\n", ret);
 			continue;
 		}
 
-		ret = drmHandleEvent(g_dev_fd, &evctx);
+		ret = drmHandleEvent(fd, &evctx);
 		if (ret) {
 			ERR("drmHandleEvent failed: %i\n", ret);
-			close_device();
-			return -1;
+			close_device(fd);
+			return 1;
 		}
 	}
 
-	close_device();
+	close_device(fd);
 	return 0;
 }
 
@@ -593,22 +710,197 @@ int get_vsync(long *vsync_array, int size, int pipe)
  * @brief
  * This function collects vblank timestamps and prints average interval between them
  *
- * @param pipe
+ * @param device_str - The device string, e.g. "/dev/dri/card0"
+ * @param pipe - The pipe number
+ * @param size - The number of timestamps to collect
+ * @return double - The average vblank interval in milliseconds, or 0.0 on error
  */
-double get_vblank_interval(int pipe)
+double get_vblank_interval(const char *device_str, int pipe, int size)
 {
-	const int MAX_STAMPS=20;
-	long timestamps[MAX_STAMPS];
 
-	if (get_vsync(timestamps, MAX_STAMPS, pipe) == 0) {
+	uint64_t timestamps[VSYNC_MAX_TIMESTAMPS];  // Allocate enough buffer
+
+	if (size > VSYNC_MAX_TIMESTAMPS) {
+		ERR("Requested size exceeding maximum\n");
+		return 0.0;
+	}
+
+	if (size < 2) {
+		ERR("Requested size is not sufficient: size=%d\n", size);
+		return 0.0;
+	}
+
+	if (get_vsync(device_str, timestamps, size, pipe) == 0) {
 			long total_interval = 0;
-			for (int i = 0; i < MAX_STAMPS - 1; ++i) {
+			for (int i = 0; i < size - 1; ++i) {
 					total_interval += (timestamps[i+1] - timestamps[i]);
 			}
 
-			double avg_interval =  total_interval / (MAX_STAMPS - 1) / 1000.0; // Convert to milliseconds
+			double avg_interval =  total_interval / (size - 1) / 1000.0; // Convert to milliseconds
 			return avg_interval;
 	}
 	return 0.0;
 }
 
+/**
+ * @brief
+ * This function sets the PLL clock for the given pipe
+ * @param pll_clock - The desired PLL clock
+ * @param pipe - The pipe to set the PLL clock for
+ * @param shift - Fraction value to be used during the calculation.
+ * @param wait_between_steps - Wait in milliseconds to be applied between steps after
+ * each time programming the registers.
+ * @return int - 0 on success, non-zero on failure
+ */
+int set_pll_clock(double pll_clock, int pipe, double shift, uint32_t wait_between_steps)
+{
+	if(!IS_INIT()) {
+		ERR("Uninitialized lib, please call lib init first\n");
+		return 1;
+	}
+
+	if (!phy_enabled_list) {
+		ERR("PHY list is not initialized\n");
+		return 1;
+	}
+
+	int result = 0;
+
+	for(list<phys *>::iterator it = phy_enabled_list->begin();
+		it != phy_enabled_list->end(); it++) {
+			if(pipe == VSYNC_ALL_PIPES || pipe == (*it)->get_pipe()) {
+				// Set pll clock for this pipe
+				int ret = (*it)->set_pll_clock(pll_clock, shift, wait_between_steps);
+				if (ret != 0) {
+					ERR("Failed to set PLL clock for pipe %d\n", (*it)->get_pipe());
+					result = ret;  // Continue attempting others, but capture the error
+				}
+			}
+	}
+
+	return result;
+}
+
+/**
+ * @brief
+ * This function return the PLL clock for the given pipe
+ * @param pipe - The pipe to set the PLL clock for
+ * each time programming the registers.
+ * @return double - The PLL clock for the given pipe
+ */
+double get_pll_clock(int pipe)
+{
+	if(!IS_INIT()) {
+		ERR("Uninitialized lib, please call lib init first\n");
+		return 0.0;
+	}
+	if (pipe == VSYNC_ALL_PIPES) {
+		ERR("Pipe not given\n");
+		return 0.0;
+	}
+
+	if(phy_enabled_list) {
+		for(list<phys *>::iterator it = phy_enabled_list->begin();
+			it != phy_enabled_list->end(); it++) {
+				if(pipe == (*it)->get_pipe()) {
+					// Set pll clock for this pipe
+					return (*it)->get_pll_clock();
+				}
+			}
+	}
+
+	return 0.0;
+}
+
+/**
+* @brief
+*	Utility function to return first available card.
+* @param  none
+* @return
+* - 0 == SUCCESS
+* - -1 = FAILURE
+*/
+const char* find_first_dri_card() {
+	static char path[32];
+	struct stat st;
+	#define MAX_CARDS 4
+	#define DEVICE_PATH_FORMAT "/dev/dri/card%d"
+
+	for (int i = 0; i < MAX_CARDS; i++) {
+		snprintf(path, sizeof(path), DEVICE_PATH_FORMAT, i);
+		if (stat(path, &st) == 0) {
+			return path;
+		}
+	}
+
+	// No card found, fallback to default
+	snprintf(path, sizeof(path), DEVICE_PATH_FORMAT, 0);
+	return path;
+}
+
+/**
+* @brief
+*	Utility function to return PHY readable name.
+* @param  pipe
+* @return  PHY type name
+*/
+bool get_phy_name(int pipe, char* out_name, size_t out_size) {
+	//static char phy_type[32] = "";
+
+	if (!out_name || out_size == 0) {
+		ERR("Invalid output buffer.\n");
+		return false;
+	}
+
+	// Initialize output buffer
+	out_name[0] = '\0';
+
+	if (!IS_INIT()) {
+		ERR("Library uninitialized. Please call lib_init() first.\n");
+		return false;
+	}
+
+	if (pipe == VSYNC_ALL_PIPES) {
+		ERR("Invalid pipe: ALL_PIPES provided.\n");
+		return false;
+	}
+
+	if (!phy_enabled_list) {
+		return false;
+	}
+
+	bool found = false;
+	for (const auto& phy : *phy_enabled_list) {
+		if (phy && pipe == phy->get_pipe()) {
+			switch (phy->get_phy_type()) {
+				case DKL:
+					snprintf(out_name, out_size, "Dekel");
+					break;
+				case COMBO:
+					snprintf(out_name, out_size, "Combo");
+					break;
+				case M_N:
+					snprintf(out_name, out_size, "M_N");
+					break;
+				case C10:
+					snprintf(out_name, out_size, "C10");
+					break;
+				case C20:
+					snprintf(out_name, out_size, "C20");
+					break;
+				default:
+					snprintf(out_name, out_size, "Unknown");
+					break;
+			}
+			found = true;
+			break;  // Exit loop once match is found
+		}
+	}
+
+	if (!found) {
+		WARNING("No matching PHY found for pipe %d\n", pipe);
+		return false;
+	}
+
+	return true;
+}

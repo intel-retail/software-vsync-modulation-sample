@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <cerrno>
 #include <mutex>
+#include <limits.h>
 #include "mmio.h"
 #include <debug.h>
 
@@ -65,13 +66,44 @@ std::mutex map_mutex; // Global mutex to protect map_cmn
 /**
 * @brief
 * Looks up the main graphics pci device using libpciaccess.
-* @param None
+* @param device_str - The device string to look up
 * @return The pci device or NULL in case of a failure
 */
-struct pci_device *intel_get_pci_device(void)
+struct pci_device *intel_get_pci_device(const char *device_str)
 {
 	struct pci_device *pci_dev;
 	int error;
+	char sysfs_device_path[PATH_MAX];
+	char resolved_path[PATH_MAX];
+	unsigned int domain, bus, dev, func;
+
+	if (!device_str) {
+		ERR("Device string is NULL\n");
+		return NULL;
+	}
+
+	// Construct the sysfs device path
+	snprintf(sysfs_device_path, sizeof(sysfs_device_path), "/sys/class/drm/%s/device", strrchr(device_str, '/') + 1);
+
+	// Resolve the symlink to something like "/sys/devices/pci0000:00/0000:00:02.0"
+	if (realpath(sysfs_device_path, resolved_path) == NULL) {
+		ERR("Failed to resolve device symlink");
+		return NULL;
+	}
+
+	// Parse the PCI domain:bus:device.function (e.g., "0000:00:02.0")
+	const char* pci_info = strrchr(resolved_path, '/');
+	if (!pci_info) {
+		ERR("Invalid resolved path: %s\n", resolved_path);
+		return NULL;
+	}
+
+	pci_info++; // Skip the '/' to get to the actual "0000:00:02.0"
+
+	if (sscanf(pci_info, "%x:%x:%x.%x", &domain, &bus, &dev, &func) != 4) {
+		ERR("Failed to parse PCI info from '%s'\n", pci_info);
+		return NULL;
+	}
 
 	error = pci_system_init();
 	if(error) {
@@ -79,9 +111,8 @@ struct pci_device *intel_get_pci_device(void)
 		return NULL;
 	}
 
-	// Grab the graphics card. Try the canonical slot first, then
-	// walk the entire PCI bus for a matching device.
-	pci_dev = pci_device_find_by_slot(0, 0, 2, 0);
+	// Find the PCI device using the parsed domain, bus, device, and function
+	pci_dev = pci_device_find_by_slot(domain, bus, dev, func);
 	if (pci_dev == NULL || pci_dev->vendor_id != 0x8086) {
 		struct pci_device_iterator *iter;
 		struct pci_id_match match;
@@ -137,10 +168,10 @@ int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 	mmio_size = MMIO_SIZE;
 
 	error = pci_device_map_range(pci_dev,
-				      pci_dev->regions[mmio_bar].base_addr,
-				      mmio_size,
-				      PCI_DEV_MAP_FLAG_WRITABLE,
-				      (void **) &g_mmio);
+					  pci_dev->regions[mmio_bar].base_addr,
+					  mmio_size,
+					  PCI_DEV_MAP_FLAG_WRITABLE,
+					  (void **) &g_mmio);
 
 	if(error) {
 		ERR("Couldn't map MMIO region\n");
@@ -152,13 +183,13 @@ int intel_mmio_use_pci_bar(struct pci_device *pci_dev)
 /**
 * @brief
 * This functions gets the deivce ID of the device
-* @param None
+* @param device_str - The device string to look up
 * @return device_id (ex 4680 = SUCCESS, 0 = FAILURE)
 */
-int get_device_id()
+int get_device_id(const char *device_str)
 {
 	if(!pci_dev) {
-		pci_dev = intel_get_pci_device();
+		pci_dev = intel_get_pci_device(device_str);
 	}
 	return pci_dev ? pci_dev->device_id : 0;
 }
@@ -166,121 +197,49 @@ int get_device_id()
 /**
 * @brief
 * This functions maps the MMIO region
-* @param None
+* @param device_str - The device string to look up
 * @return
 * - 0 = SUCCESS
 * - 1 = FAILURE
 */
-int map_mmio()
+int map_mmio(const char *device_str)
 {
 	if(!pci_dev) {
-		pci_dev = intel_get_pci_device();
+		pci_dev = intel_get_pci_device(device_str);
 	}
 	return pci_dev ? intel_mmio_use_pci_bar(pci_dev) : 0;
-}
-
-
-/**
-* @brief
-* This function can either map MMIO or regular video memory
-* @param base_index - Which bar to map
-* @param size - The size of memory to map
-* @return
-* - 0 = SUCCESS
-* - 1 = FAILURE
-*/
-int map_cmn(int base_index, int size)
-{
-	std::lock_guard<std::mutex> lock(map_mutex); // Lock the mutex for the scope of the function
-	int found = 0;
-	loff_t base;
-	int ret_val = 1;
-	unsigned long read_size = sizeof(gfx_pci_device);
-	const char proc_filename[] = "/proc/bus/pci/00/02.0";
-	struct stat file_stats;
-	FILE *fp;
-	unsigned char **temp;
-	size_t bytes_read;
-
-	fp = fopen(proc_filename, "r");
-
-	if(!fp) {
-
-		ERR("Unable to open /proc/bus/pci/00/02.0\n");
-		ret_val = 0;
-
-	} else {
-
-		if(lstat(proc_filename, &file_stats) != 0) {
-
-			ERR("Couldn't get file information for"
-				"/PROC/bus/pci/00/02.0\n");
-			ret_val = 0;
-
-		} else {
-
-			memset(g_raw_device, 0, 256);
-
-			if((unsigned long) file_stats.st_size < sizeof(gfx_pci_device)) {
-				read_size = file_stats.st_size;
-			}
-
-			bytes_read = fread(g_raw_device, 1, 256, fp);
-			if(bytes_read != 256) {
-				ERR("Couldn't read 256 bytes of data from PCI space\n");
-				ret_val = 0;
-			} else {
-				memcpy(&g_device, g_raw_device, read_size);
-				found = 1;
-			}
-		} /* end if(lstat...) */
-
-		fclose(fp);
-
-		if(!found) {
-			ret_val = 0;
-		} else {
-
-			g_fd = open("/dev/mem",O_RDWR);
-			if(!g_fd) {
-				ERR("Could not open /dev/mem.\n");
-				ret_val = 0;
-			} else {
-
-				base = (loff_t)(g_device.base_addr[base_index]&0xffffff80000);
-				if(base_index == 0) {
-					temp = &g_mmio;
-					g_mmio_size = size;
-				} else {
-					temp = &g_mem;
-					g_mem_size = size;
-				}
-				*temp = (unsigned char *) mmap(NULL,
-						size, PROT_READ | PROT_WRITE, MAP_SHARED,
-						g_fd, base);
-
-				if(*temp == MAP_FAILED) {
-					ERR("Unable to mmap GMCH Registers: %s\n", strerror(errno));
-					ret_val = 0;
-				}
-			}
-		}
-	}
-	return ret_val;
 }
 
 /**
 * @brief
 * Unmap the memory range that was mapped during initialization
 * @param None
-* @return void
+* @return int, 0 - success, non zero - failure
 */
-void close_mmio_handle()
+int close_mmio_handle()
 {
-	pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE);
-	pci_system_cleanup();
-	if (g_fd >= 0 && close(g_fd) == -1) {
-		ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
-	}
-}
+    std::lock_guard<std::mutex> lock(map_mutex); // Lock the mutex for the scope of the function
 
+    int status = 0;
+
+    if (pci_dev && g_mmio) {
+        if (pci_device_unmap_range(pci_dev, g_mmio, MMIO_SIZE) != 0) {
+            ERR("Failed to unmap MMIO range.\n");
+            status = 1;
+        }
+    }
+
+    pci_dev = NULL;
+
+    pci_system_cleanup(); // no error return, assumed to succeed
+
+    if (g_fd >= 0) {
+        if (close(g_fd) == -1) {
+            ERR("Failed to properly close file descriptor. Error: %s\n", strerror(errno));
+            status = 1;
+        }
+        g_fd = -1;
+    }
+
+    return status;
+}

@@ -32,16 +32,21 @@ SUDO="sudo"
 PRIMARY_INERFACE="enpxxxx"
 PRIMARY_ETH_ADDR="xx:xx:xx:xx:xx:xx"
 PRIMARY_PROJ_PATH="<path on primary>/project" # Sample path
+PRIMARY_DEVICE="/dev/dri/card0"
 
 # Secondary machine configuration.
 #IP needed for IP based communcation only
 SECONDARY_ADDRESS="user@192.xxx.xx.xx"
 SECONDARY_INTERFACE="enpxxxx"
+SECONDARY_DEVICE="/dev/dri/card0"
 
-EXECUTABLE_NAME="vsync_test"
-# Path on secondary where the executable will be copied to.
-# Update path accordingly. e.g user's home directory
-CLIENT_DIR="<path on secondary>/.vblanksync"
+VSYNCTEST="vsync_test"
+VSYNCTEST_APP="test/$VSYNCTEST"
+SYNCTEST_APP="synctest/synctest"
+VBLTEST_APP="vbltest/vbltest"
+# Path on secondary where the executable will be copied to
+# Update path as needed. e.g user's home directory
+CLIENT_DIR="<user home directory>/.vblanksync"
 
 # Output log files
 PRIMARY_LOG_PTP="primary_ptp.log"
@@ -56,5 +61,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR=$(dirname $SCRIPT_DIR)
 mkdir -p $ROOT_DIR/logs
 LOG_DIR="$ROOT_DIR/logs/"
-
 

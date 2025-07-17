@@ -21,17 +21,17 @@
 # * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # * IN THE SOFTWARE.
 #
-# This script runs ptp4l and phc2sys on both the master and slave machines. It should be executed
-# from the master machine.
+# This script runs ptp4l and phc2sys on both the primary and secondary machines. It should be executed
+# from the primary machine.
 #
-# The master machine must have passwordless SSH login enabled for the slave to allow remote
+# The primary machine must have passwordless SSH login enabled for the secondary to allow remote
 # command execution.
 #
-# To set this up, follow these steps on the master machine:
-#             (master)$ ssh-keygen
-#             (master)$ ssh-copy-id user@slave
+# To set this up, follow these steps on the primary machine:
+#             (primary)$ ssh-keygen
+#             (primary)$ ssh-copy-id user@secondary
 #
-# Make sure to update/change configuration variables for both master and slave machines as necessary.
+# Make sure to update/change configuration variables for both primary and secondary machines as necessary.
 #
 # After executing the script, the ptp4l and phc2sys will start synchrnonizing time on both machines.
 # The script will wait for the user to press any key before terminating all four processes on both
@@ -44,22 +44,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Include the variables from config.sh
 source "$SCRIPT_DIR/config.sh"
 
-# Commands to stop ptp4l and phc2sys on the master machine
+# Commands to stop ptp4l and phc2sys on the primary machine
 PRIMARY_STOP_COMMANDS="
     $SUDO pkill -SIGINT  ptp4l 2>&1 | tee  -a $LOG_DIR$PRIMARY_LOG_PTP &
     $SUDO pkill -SIGINT phc2sys 2>&1 | tee -a $LOG_DIR$PRIMARY_LOG_PHC
 "
 
-# Commands to stop ptp4l and phc2sys on the slave machine
+# Commands to stop ptp4l and phc2sys on the secondary machine
 SECONDARY_STOP_COMMANDS_PTP="$SUDO pkill -SIGINT  ptp4l"
 SECONDARY_STOP_COMMANDS_PHC="$SUDO pkill -SIGINT  phc2sys"
 
-# Stop commands on the master machine
-echo "Stopping commands on the master machine..."
+# Stop commands on the primary machine
+echo "Stopping commands on the primary machine..."
 eval $PRIMARY_STOP_COMMANDS
 
-# Stop commands on the slave machine via SSH
-echo "Stopping commands on the slave machine..."
+# Stop commands on the secondary machine via SSH
+echo "Stopping commands on the secondary machine..."
 ssh $SECONDARY_ADDRESS $SECONDARY_STOP_COMMANDS_PTP 2>&1 | tee  -a $LOG_DIR$SECONDARY_LOG_PTP
 ssh $SECONDARY_ADDRESS $SECONDARY_STOP_COMMANDS_PHC  2>&1 | tee  -a $LOG_DIR$SECONDARY_LOG_PHC
 

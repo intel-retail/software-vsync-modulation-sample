@@ -53,18 +53,24 @@ protected:
 	int sockfd, portid, con_type;
 	struct hostent * hostptr;
 	sockaddr_in server_addr;
+	char ip_address[32];  // Store IP address
 	void set_server(sockaddr_in *addr, int s_addr, int portid);
 	void pr_inet(char **listptr, int length, char * buffer);
 public:
-	connection() : portid(5001) , con_type(TCP) { };
+	connection(const char* ip = "");
 	virtual ~connection() {}
 	virtual int init_client(const char *server_name);
 	virtual int init_server();
 	int open_socket(int type);
 	int sendto_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size);
-	int recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size);
+	int recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, unsigned int *dest_size);
 	virtual int send_msg(void *m, int size, int sockid = 0) { return sendto_msg(m, size, sockid, (struct sockaddr *) &server_addr, sizeof(server_addr)); }
-	virtual int recv_msg(void *m, int size, int sockid = 0) { return recvfrom_msg(m, size, sockid, (struct sockaddr *) &server_addr, sizeof(server_addr)); }
+	virtual int recv_msg(void *m, int size, int sockid = 0)
+	{
+		struct sockaddr_in dest_sa; // Assuming dest_sa is of type sockaddr_in
+		socklen_t dest_sa_size = sizeof(dest_sa); // socklen_t is typically used for socket-related sizes
+		return recvfrom_msg(m, size, sockid, (struct sockaddr *) &server_addr, &dest_sa_size);
+	}
 	virtual int accept_client(int *new_sockfd);
 	void close_client();
 	void close_server();
@@ -81,6 +87,7 @@ protected:
 	int ptp_open(const char *iface);
 	int find_iface_index(const char *iface);
 	bool str_to_l2_addr(char *str);
+	void safe_strncpy(char *dest, const char *src, size_t strBufferSize);
 public:
 	ptp_connection(const char *ifc, const char *mac = NULL);
 	int init_client(const char *server_name);

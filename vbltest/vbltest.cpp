@@ -40,13 +40,15 @@ using namespace std;
 * @param sz - The size of this array
 * @return The average of the vertical syncs
 */
-long find_avg(long *va, int sz)
+double find_avg(uint64_t* va, int sz)
 {
-	int avg = 0;
-	for(int i = 0; i < sz - 1; i++) {
-		avg += va[i+1] - va[i];
+	double avg = 0;
+	// Return 0 or handle error if there are less than 2 elements
+	if (sz < 2) return 0;
+	for (int i = 0; i < sz - 1; i++) {
+		avg += va[i + 1] - va[i];
 	}
-	return avg / ((sz == 1) ? sz : (sz - 1));
+	return avg / (sz - 1);
 }
 
 /**
@@ -59,12 +61,42 @@ long find_avg(long *va, int sz)
 * @param sz - The size of this array
 * @return void
 */
-void print_vsyncs(char *msg, long *va, int sz)
+void print_vsyncs(char* msg, uint64_t* va, int sz)
 {
-	INFO("%s VSYNCS\n", msg);
-	for(int i = 0; i < sz; i++) {
-		INFO("%6f\n", ((double) va[i])/1000000);
+	char buffer[80];
+
+	if (sz <= 0) {
+		INFO("No VBlank timestamps available.\n");
+		return;
 	}
+
+	unsigned min_offset = va[0] % 1000000;
+
+	INFO("%sVSYNCS\n", msg);
+	for (int i = 0; i < sz; i++) {
+
+		uint64_t microseconds_since_epoch = va[i];
+		time_t seconds_since_epoch = microseconds_since_epoch / 1000000;
+
+		unsigned offset = microseconds_since_epoch % 1000000;
+		if (offset < min_offset)
+			min_offset = offset;
+
+		// Convert to local time
+		struct tm* local_time = localtime(&seconds_since_epoch);
+		// Prepare buffer for formatted date/time
+
+		// Format the local time according to the system's locale
+		strftime(buffer, sizeof(buffer), "%x %X", local_time);  // %x for date, %X for time
+
+		// Print formatted date/time and microseconds
+		INFO("Received VBlank time stamp [%2d]: %llu -> %s [+%-6u us] \n", i,
+			microseconds_since_epoch,
+			buffer,
+			static_cast<unsigned int>(microseconds_since_epoch % 1000000));
+	}
+
+	INFO("First timestamp in the second: +%u us\n", min_offset);
 }
 
 /**
@@ -74,12 +106,15 @@ void print_vsyncs(char *msg, long *va, int sz)
  * @param program_name - Name of the program
  * @return void
  */
-void print_help(const char *program_name)
+void print_help(const char* program_name)
 {
-	PRINT("Usage: %s [-p pipe] [-c vsync_count] [-v loglevel] [-h]\n"
+	// Using printf for printing help
+	printf("Usage: %s [-p pipe] [-c vsync_count] [-v loglevel] [-h]\n"
 		"Options:\n"
 		"  -p pipe        Pipe to get stamps for.  0,1,2 ... (default: 0)\n"
-		"  -c vsync_count Number of vsyncs to get timestamp for (default: 300)\n"
+		"  -c vsync_count Number of vsyncs to get timestamp for (default: 100)\n"
+		"  -e device      Device string (default: /dev/dri/card0)\n"
+		"  -l loop        Loop mode: 0 = no loop, 1 = loop (default: 0)\n"
 		"  -v loglevel    Log level: error, warning, info, debug or trace (default: info)\n"
 		"  -h             Display this help message\n",
 		program_name);
@@ -94,16 +129,20 @@ void print_help(const char *program_name)
 * - 0 = SUCCESS
 * - 1 = FAILURE
 */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	int ret = 0;
-	long *client_vsync, avg;
+	uint64_t* client_vsync;
+	double avg;
 
-	INFO("Vbltest Version: %s\n", get_version().c_str());
-	int vsync_count = 300;  // number of vsyncs to get timestamp for
+	printf("Vbltest Version: %s\n", get_version( ).c_str( ));
+	int vsync_count = VSYNC_MAX_TIMESTAMPS;  // number of vsyncs to get timestamp for
+	std::string device_str = find_first_dri_card();
+	std::string log_level = "info";
+	int loop_mode = 0;
 	int pipe = 0;  // Default pipe# 0
 	int opt;
-	while ((opt = getopt(argc, argv, "p:c:v:h")) != -1) {
+	while ((opt = getopt(argc, argv, "p:c:e:l:v:h")) != -1) {
 		switch (opt) {
 			case 'p':
 				pipe = std::stoi(optarg);
@@ -111,39 +150,56 @@ int main(int argc, char *argv[])
 			case 'c':
 				vsync_count = std::stoi(optarg);
 				break;
+			case 'l':
+				loop_mode = std::stoi(optarg);
+				break;
 			case 'v':
-				set_log_level(optarg);
+				log_level = optarg;
+				set_log_level_str(optarg);
+				break;
+			case 'e':
+				device_str = optarg;
 				break;
 			case 'h':
+				print_help(argv[0]);
+				exit(EXIT_SUCCESS);
 			case '?':
-				if (optopt == 'p' || optopt == 'c' || optopt == 'v') {
-					ERR("Option -%c requires an argument.\n", char(optopt));
-				} else {
-					ERR("Unknown option: -%c\n", char(optopt));
-				}
 				print_help(argv[0]);
 				exit(EXIT_FAILURE);
 		}
 	}
 
-	if(vsync_lib_init()) {
-		ERR("Couldn't initialize vsync lib\n");
-		return 1;
+	// Print configurations
+	INFO("Configuration:\n");
+	INFO("\tPipe ID: %d\n", pipe);
+	INFO("\tDevice: %s\n", device_str.c_str());
+	INFO("\tSync Count: %d\n", vsync_count);
+	INFO("\tLog Level: %s\n", log_level.c_str());
+
+	print_drm_info(device_str.c_str());
+
+	client_vsync = new uint64_t[vsync_count];
+	if (!client_vsync) {
+		ERR("Memory allocation failed for client_vsync.\n");
+		return 1; // Exit if memory allocation fails
 	}
 
-	client_vsync = new long[vsync_count];
+	do {
+		if (get_vsync(device_str.c_str(), client_vsync, vsync_count, pipe)) {
+			delete[] client_vsync;
+			return 1;
+		}
 
-	if(get_vsync(client_vsync, vsync_count, pipe)) {
-		delete [] client_vsync;
-		vsync_lib_uninit();
-		return 1;
-	}
+		avg = find_avg(&client_vsync[0], vsync_count);
 
-	avg = find_avg(&client_vsync[0], vsync_count);
-	print_vsyncs((char *) "", client_vsync, vsync_count);
-	INFO("Time average of the vsyncs on the primary system is %ld\n", avg);
+		// Clear the console
+		printf("\033[2J\033[H");  // clear screen and move cursor to top
+		fflush(stdout);
 
-	delete [] client_vsync;
-	vsync_lib_uninit();
+		print_vsyncs((char*)"", client_vsync, vsync_count);
+		INFO("Time average of the vsyncs on the primary system is %.3lf microseconds\n", avg);
+	} while(loop_mode); // Keep printing while Ctrl+C is not pressed
+
+	delete[] client_vsync;
 	return ret;
 }

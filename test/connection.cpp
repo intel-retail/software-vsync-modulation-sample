@@ -35,9 +35,31 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#include <linux/if_packet.h>
+#include <fcntl.h> // For non-blocking sockets
 #include <errno.h>
 #include <ctype.h>
+
+extern int client_done;
+
+/**
+ * @brief Construct a new connection::connection
+ *
+ * @param ip - Ip address for local machine (server mode)
+ * 			   or for remote (client mode).
+ */
+connection::connection(const char* ip) : portid(5001) , con_type(TCP)
+{
+	sockfd = 0;
+	hostptr = {};
+	server_addr = {};
+	
+	if (ip) {
+		strncpy(ip_address, ip, sizeof(ip_address) - 1);
+		ip_address[sizeof(ip_address) - 1] = '\0'; // Ensure null-termination
+	} else {
+		ip_address[0] = '\0'; // Default to an empty string if no IP provided
+	}
+}
 
 /**
 * @brief
@@ -85,43 +107,35 @@ void connection::set_server(sockaddr_in *addr, int s_addr, int portid)
 */
 int connection::init_client(const char *server_name)
 {
-	char server_host_addr[MAX_LEN] = {0}, copy[MAX_LEN] = {0}, *ptr;
-	int ret;
-	in_addr_t data;
+	TRACING();
+	struct sockaddr_in serv_addr;
+	struct hostent *server;
 
-	if(!server_name) {
-		ERR("Invalid server name\n");
+	if (!server_name) {
+		ERR("Invalid server name provided\n");
 		return 1;
 	}
 
-	if(open_socket(con_type)) {
+	if (open_socket(con_type)) {
+		ERR("Failed to open socket\n");
 		return 1;
 	}
 
-	strncpy(copy, server_name, MAX_LEN-1);
-	ptr = strtok(copy, ".");
-
-	if(atoi(ptr)) {
-		data = inet_addr(server_name);
-		hostptr = gethostbyaddr(&data, 4, AF_INET);
-	} else {
-		hostptr = gethostbyname(server_name);
-	}
-
-	if(!hostptr) {
-		ERR("Invalid Host name\n");
+	server = gethostbyname(server_name);
+	if (server == NULL) {
+		ERR("No such host found\n");
 		return 1;
 	}
 
-	pr_inet(hostptr->h_addr_list, hostptr->h_length, server_host_addr);
-	set_server(&server_addr, inet_addr(server_host_addr), portid);
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	bcopy((char *)server->h_addr,
+		 (char *)&serv_addr.sin_addr.s_addr,
+		 server->h_length);
+	serv_addr.sin_port = htons(portid);
 
-	ret = connect(sockfd,
-		(struct sockaddr *) &server_addr,
-		sizeof(server_addr));
-
-	if(ret < 0) {
-		ERR("Couldn't connect to the server\n");
+	if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+		ERR("Error connecting: %s\n", strerror(errno));
 		return 1;
 	}
 	return 0;
@@ -135,6 +149,7 @@ int connection::init_client(const char *server_name)
 */
 void connection::close_client()
 {
+	TRACING();
 	close(sockfd);
 }
 
@@ -146,6 +161,7 @@ void connection::close_client()
 */
 void connection::close_server()
 {
+	TRACING();
 	close(sockfd);
 }
 
@@ -176,14 +192,17 @@ void connection::pr_inet(char **listptr, int length, char * buffer)
 */
 int connection::init_server()
 {
+	TRACING();
 	int ret, optval = 1;
 
 	if(open_socket(con_type)) {
 		return 1;
 	}
 
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-	set_server(&server_addr, htonl(INADDR_ANY), portid);
+	if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) return 1;
+	// Use stored IP address if provided, otherwise default to INADDR_ANY
+	in_addr_t bind_addr = (ip_address[0] == '\0') ? htonl(INADDR_ANY) : inet_addr(ip_address);
+	set_server(&server_addr, bind_addr, portid);
 
 	ret = bind(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	if(ret < 0) {
@@ -214,6 +233,7 @@ int connection::init_server()
 */
 int connection::accept_client(int *new_sockfd)
 {
+	TRACING();
 	socklen_t fromlen;
 	sockaddr_in from;
 
@@ -244,6 +264,7 @@ int connection::accept_client(int *new_sockfd)
 */
 int connection::sendto_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
 {
+	TRACING();
 	long bytes_returned;
 	bytes_returned = sendto(sockid ? sockid : sockfd,
 		(char *) m,
@@ -268,48 +289,42 @@ int connection::sendto_msg(void *m, int size, int sockid, struct sockaddr *dest,
 *	communicate with the other system on. If 0, then a global sockfd variable will
 *	be used.
 * @param *dest - The destination address
-* @param dest_size - Size of the destination data structure
+* @param *dest_size - Size of the destination data structure
 * @return
 * - 0 = SUCCESS
 * - 1 = FAILURE
 */
-extern int client_done;
-int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, int dest_size)
-{
-	long bytes_returned;
-	int cli_len = dest_size;
-	struct timeval timeout;
-	fd_set readfds;
+int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *dest, unsigned int *dest_size) {
+	TRACING();
+	ssize_t bytes_received;
+	int sockfd_to_use = sockid ? sockid : sockfd;
+	// Set the socket to non-blocking mode
+	int flags = fcntl(sockfd_to_use, F_GETFL, 0);
+	if (flags < 0) return 1;
+
+	if (fcntl(sockfd_to_use, F_SETFL, flags | O_NONBLOCK) < 0) return 1;
 
 	while (!client_done) {
-		FD_ZERO(&readfds);
-		FD_SET(sockfd, &readfds);
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 500000; // 500ms timeout
+		bytes_received = recvfrom(sockfd_to_use, (char *) m, size, 0, dest, (socklen_t *) dest_size);
 
-		// Use select to check if data is available to read on the socket
-		// before calling the potentially blocking recvfrom call
-		int activity = select(sockfd + 1, &readfds, NULL, NULL, &timeout);
-
-		if ((activity < 0) && (errno != EINTR)) {
-				ERR("select error");
-			}
-
-		// Check if the socket has data available to read
-		if (FD_ISSET(sockfd, &readfds) && !client_done) {
-			// Data is available on the socket, read it using recvfrom
-			bytes_returned = recvfrom(sockid ? sockid : sockfd,
-					(char *) m,
-					size,
-					0,
-					dest,
-					(unsigned int *) &cli_len);
-			DBG("Received message with %ld bytes\n", bytes_returned);
-			if(bytes_returned < 0) {
+		if (bytes_received > 0) {
+			DBG("Received message with %ld bytes\n", bytes_received);
+			return 0;
+		} else if (bytes_received == 0) {
+			// No data received, check if the client has closed the connection
+			DBG("No data received, client may have closed the connection\n");
+			return 1;
+		} else {
+			// An error occurred or the recvfrom call would block
+			if (errno == EWOULDBLOCK || errno == EAGAIN) {
+				// No data available right now, continue to poll
+				const int us_in_ms=1000;
+				usleep(100*us_in_ms); // Sleep for 100ms to prevent busy waiting
+				continue;
+			} else {
 				ERR("recv function failed. Error: %s\n", strerror(errno));
 				return 1;
 			}
-			return 0;
 		}
 	}
 	return 0;
@@ -325,6 +340,7 @@ int connection::recvfrom_msg(void *m, int size, int sockid, struct sockaddr *des
 */
 ptp_connection::ptp_connection(const char *ifc, const char *mac)
 {
+	iface_index = 0;
 	con_type = PTP;
 	memset(server_ip, 0, MAX_LEN);
 	memset(iface, 0, MAX_LEN);
@@ -334,6 +350,24 @@ ptp_connection::ptp_connection(const char *ifc, const char *mac)
 		strncpy(server_ip, mac, MAX_LEN-1);
 	}
 	memset(&dest_sa, 0, sizeof(dest_sa));
+}
+
+/**
+* @brief
+* Given a PTP interface name, this function finds the index
+* of this interface. It does so by sending the SIOCGIFINDEX IOCTL to the
+* network driver.
+* @param *dest - destination string to be stored
+* @param *src - source of the string to be copy over
+* @param strBufferSize - size of the string buffer
+* @return void
+*/
+void ptp_connection::safe_strncpy(char *dest, const char *src, size_t strBufferSize) {
+    strncpy(dest, src, strBufferSize);
+    // Ensure null termination
+    if (strBufferSize > 0) {
+        dest[strBufferSize - 1] = '\0';
+    }
 }
 
 /**
@@ -359,7 +393,7 @@ int ptp_connection::find_iface_index(const char *iface)
 		return 1;
 	}
 
-	strncpy(ifreq.ifr_name, iface, IFNAMSIZ);
+	safe_strncpy(ifreq.ifr_name, iface, IFNAMSIZ);
 	err = ioctl(sd, SIOCGIFINDEX, &ifreq);
 	if(err < 0) {
 		ERR("failed to get interface index. Error: %s\n", strerror(errno));
@@ -454,6 +488,7 @@ int ptp_connection::ptp_open(const char *iface)
 */
 int ptp_connection::init_client(const char *server_name)
 {
+	TRACING();
 	if(ptp_open(iface)) {
 		return 1;
 	}
@@ -481,6 +516,7 @@ int ptp_connection::init_client(const char *server_name)
 */
 int ptp_connection::init_server()
 {
+	TRACING();
 	if(ptp_open(iface)) {
 		return 1;
 	}
@@ -500,6 +536,7 @@ int ptp_connection::init_server()
 */
 int ptp_connection::send_msg(void *m, int size, int sockid)
 {
+	TRACING();
 	return sendto_msg(m, size, sockid, (struct sockaddr *) &dest_sa, sizeof(dest_sa));
 }
 
@@ -516,5 +553,8 @@ int ptp_connection::send_msg(void *m, int size, int sockid)
 */
 int ptp_connection::recv_msg(void *m, int size, int sockid)
 {
-	return recvfrom_msg(m, size, sockid, (struct sockaddr *) &dest_sa, sizeof(dest_sa));
+	TRACING();
+
+	socklen_t dest_sa_size = sizeof(dest_sa); // socklen_t is typically used for socket-related sizes
+	return recvfrom_msg(m, size, sockid, (struct sockaddr *) &dest_sa, &dest_sa_size);
 }

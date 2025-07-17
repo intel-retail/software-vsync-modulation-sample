@@ -26,11 +26,15 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <time.h>
+#include <vsyncalter.h>
 #include "debug.h"
 
 
 log_level dbg_lvl = LOG_LEVEL_INFO;
 std::string mode_str = "";
+bool time_init = false;
+struct timespec base_time;
 
 /**
 * @brief
@@ -38,12 +42,17 @@ std::string mode_str = "";
 * The logging level determines the severity of messages that will be logged.
 *
 * @param level - The logging level to set, specified as a LogLevel enum value.
-* @return void
+* @return 0 - success, non zero - failure
 */
-void set_log_level(log_level level)
+int set_log_level(log_level level)
 {
+	if (level < LOG_LEVEL_NONE || level > LOG_LEVEL_TRACE) {
+		ERR("Invalid log level: %d\n", level);
+		return 1;
+	}
 
 	dbg_lvl = level;
+	return 0;
 }
 /**
 * @brief
@@ -51,26 +60,29 @@ void set_log_level(log_level level)
 * The logging level determines the severity of messages that will be logged.
 *
 * @param level - The logging level to set, specified as a string value.
-* @return void
+* @return 0 - success, non zero - failure
 */
-void set_log_level(const char* log_level)
+int set_log_level_str(const char* log_level)
 {
+	int status = 1;
 
 	if (log_level == NULL) {
-		return;
+		return 1;
 	}
 
 	if (strcasecmp(log_level, "error") == 0) {
-		set_log_level(LOG_LEVEL_ERROR);
+		status = set_log_level(LOG_LEVEL_ERROR);
 	} else if (strcasecmp(log_level, "warning") == 0) {
-		set_log_level(LOG_LEVEL_WARNING);
+		status = set_log_level(LOG_LEVEL_WARNING);
 	} else if (strcasecmp(log_level, "info") == 0) {
-		set_log_level(LOG_LEVEL_INFO);
+		status = set_log_level(LOG_LEVEL_INFO);
 	} else if (strcasecmp(log_level, "debug") == 0) {
-		set_log_level(LOG_LEVEL_DEBUG);
+		status = set_log_level(LOG_LEVEL_DEBUG);
 	} else if (strcasecmp(log_level, "trace") == 0) {
-		set_log_level(LOG_LEVEL_TRACE);
+		status = set_log_level(LOG_LEVEL_TRACE);
 	}
+
+	return status;
 }
 
 /**
@@ -79,15 +91,20 @@ void set_log_level(const char* log_level)
 * The logging mode determines the source for the log messages.
 * (PRIMARY, SECONDARY, VBLTEST, SYNCTEST).
 *
-* @param mode - A string representing the logging mode (e.g., "console", "file").
-* @return void
+* @param mode - A string representing the run mode (e.g., "PRIMARY", "SECONDARY").
+* @return 0 - success, non zero - failure
 */
-void set_log_mode(const char* mode)
+int set_log_mode(const char* mode)
 {
 
-	if (mode != NULL) {
-		mode_str = mode;
+	if (mode == NULL) {
+		ERR("NULL log mode provided\n");
+		return 1;
 	}
+
+	mode_str = mode;
+
+	return 0;
 }
 
 /**
@@ -102,15 +119,36 @@ void set_log_mode(const char* mode)
 */
 void log_message(log_level level, const char* format, ...)
 {
+	struct timespec now, diff;
 
 	if (level > dbg_lvl) {
 		return;
 	}
 
+	// If this is the first time then initialize the base time
+	if (time_init == false) {
+		clock_gettime(CLOCK_MONOTONIC, &base_time);
+		time_init = true;
+	}
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	// Calculate the time difference from base_time
+	if ((now.tv_nsec - base_time.tv_nsec) < 0) {
+		diff.tv_sec = now.tv_sec - base_time.tv_sec - 1;
+		diff.tv_nsec = now.tv_nsec - base_time.tv_nsec + 1000000000;
+	} else {
+		diff.tv_sec = now.tv_sec - base_time.tv_sec;
+		diff.tv_nsec = now.tv_nsec - base_time.tv_nsec;
+	}
+
+	// Convert nanoseconds to milliseconds
+	int msec = diff.tv_nsec / 1000000;
+
 	const char* level_str = nullptr;
 	switch (level) {
 		case LOG_LEVEL_NONE:
-			level_str = "";
+			level_str = "[PRNT]";
 			break;
 		case LOG_LEVEL_ERROR:
 			level_str = "[ERR ]";
@@ -132,8 +170,7 @@ void log_message(log_level level, const char* format, ...)
 			break;
 	}
 
-	printf("%s", mode_str.c_str());
-	printf("%s ", level_str);
+	printf("%s%s[%4ld.%03d] ", mode_str.c_str(),level_str, diff.tv_sec, msec);
 	va_list args;
 	va_start(args, format);
 	vprintf(format, args);

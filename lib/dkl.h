@@ -25,7 +25,7 @@
 #ifndef _DKL_H
 #define _DKL_H
 
-#include "common.h"
+#include "phy.h"
 
 #define REF_DKL_FREQ                  38.4
 #define PHY_BASE                      0x168000
@@ -50,20 +50,24 @@ typedef struct _dkl_phy_reg {
 	reg dkl_index;
 	int dkl_index_val;
 	int enabled;
-	int done;
 } dkl_phy_reg;
 
 class dkl : public phys {
 public:
-	dkl(ddi_sel *ds, int first_dkl_phy_loc);
-	~dkl() {};
+	dkl(ddi_sel* ds, int first_dkl_phy_loc, int _pipe);
+	~dkl();
 
-	void program_mmio(dkl_phy_reg *pr, int mod);
-	static void reset_phy_regs(int sig, siginfo_t *si, void *uc);
-	void reset_phy_regs(dkl_phy_reg *dr);
-
-	void program_phy(double time_diff, double shift);
-	void wait_until_done();
+	int program_mmio(int mod);
+	double calculate_pll_clock(uint32_t dkl_pll_div0, uint32_t dkl_bias);
+	double calculate_pll_clock();
+	int calculate_feedback_dividers(double pll_freq);
+	void calculate_feedback_dividers(double pll_freq, uint32_t dkl_pll_div0,
+		uint8_t* i_fbdiv_intgr_7_0, uint32_t* i_fbdivfrac_21_0);
+	void print_registers();
+	void read_registers();
+private:
+	dkl_phy_reg* dkl_phy;
+	int dpll_num;
 };
 
 extern dkl_phy_reg dkl_table[];
