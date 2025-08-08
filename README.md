@@ -61,7 +61,7 @@ The build system assumes the following, prior to executing the build steps:
 1) The system has [Ubuntu 22.04 or 24.04](https://ubuntu.com/tutorials/install-ubuntu-desktop#1-overview).  Other Linux flavors should work too.
 1) Libraries installed: `sudo apt install -y git build-essential make`
 1) [Disable secure boot](https://wiki.ubuntu.com/UEFI/SecureBoot/DKMS)
-1) MUST apply the [PLL kernel patch](./resources/shared_dpll-kernel-6.xx.patch) located in resources folder.
+1) MUST apply the matching [PLL kernel patch](./resources/shared_dpll-kernel-6.10+.patch) located in resources folder.
 
 	Apply shared_dpll-kernel-x.x.patch according to kernel version.  e.g shared_dpll-kernel-6.10+.patch applicable from 6.10 till 6.13.  6.14 has its own patch in resource directory.
 
