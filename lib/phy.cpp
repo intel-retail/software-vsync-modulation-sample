@@ -345,5 +345,6 @@ int phys::set_pll_clock(double current_pll_clock, double target_pll_clock, doubl
  */
 double phys::get_pll_clock(void)
 {
+	read_registers();
 	return calculate_pll_clock();
 }
